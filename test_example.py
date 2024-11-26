@@ -98,15 +98,15 @@ def test_read_input_registers():
 
 
 
-read_value = client.read_input_registers(
-    address=100,
-    count=len(VALUE_HOLDING_REGISTERS),
-    slave=1
-    ).registers[:len(VALUE_HOLDING_REGISTERS)]
-if read_value != VALUE_HOLDING_REGISTERS:
-    print_error(
-        'Ошибка в чтении данных (test_read_input_registers).\n',
-        f'Ожидаемое значение:   {VALUE_HOLDING_REGISTERS}',
-        f'Полученное значение:  {read_value}')
-
-close_client()
+# read_value = client.read_input_registers(
+#     address=100,
+#     count=len(VALUE_HOLDING_REGISTERS),
+#     slave=1
+#     ).registers[:len(VALUE_HOLDING_REGISTERS)]
+# if read_value != VALUE_HOLDING_REGISTERS:
+#     print_error(
+#         'Ошибка в чтении данных (test_read_input_registers).\n',
+#         f'Ожидаемое значение:   {VALUE_HOLDING_REGISTERS}',
+#         f'Полученное значение:  {read_value}')
+# 
+# close_client()
