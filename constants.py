@@ -1,6 +1,8 @@
 HOST = 'localhost'
 PORT = 502
 
+
+# Константы для test_example
 CHECK_VALUE_WRITE_COILS = [True, False,
                            True, False,
                            True, False,

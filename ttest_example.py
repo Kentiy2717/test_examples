@@ -1,5 +1,5 @@
 from TCP_Client import connect_client, close_client, client
-from color_print import print_blue, print_green, print_error, print_red
+from color_print import print_error
 from constants import (
     CHECK_VALUE_WRITE_COILS,
     CHECK_VALUE_WRITE_REGISTERS,
@@ -94,19 +94,15 @@ def test_read_input_registers():
     assert read_value == VALUE_HOLDING_REGISTERS, message
 
 
+read_value = client.read_input_registers(
+    address=100,
+    count=len(VALUE_HOLDING_REGISTERS),
+    slave=1
+    ).registers[:len(VALUE_HOLDING_REGISTERS)]
+if read_value != VALUE_HOLDING_REGISTERS:
+    print_error(
+        'Ошибка в чтении данных (test_read_input_registers).\n',
+        f'Ожидаемое значение:   {VALUE_HOLDING_REGISTERS}',
+        f'Полученное значение:  {read_value}')
 
-
-
-
-# read_value = client.read_input_registers(
-#     address=100,
-#     count=len(VALUE_HOLDING_REGISTERS),
-#     slave=1
-#     ).registers[:len(VALUE_HOLDING_REGISTERS)]
-# if read_value != VALUE_HOLDING_REGISTERS:
-#     print_error(
-#         'Ошибка в чтении данных (test_read_input_registers).\n',
-#         f'Ожидаемое значение:   {VALUE_HOLDING_REGISTERS}',
-#         f'Полученное значение:  {read_value}')
-# 
-# close_client()
+close_client()
