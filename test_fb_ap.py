@@ -5,14 +5,15 @@
 1. Проверка пересчета измеренного значения (test_recalculated_measured_value).
 2. Проверка нормального значения (test_normal_value).
 '''
-from assist_function import check_status
+from assist_function import check_status, setup_limit_value, working_with_limit_value
 from constants_FB_AP import (
-    HYSTERESIS,
     STATUS_FOR_CHECK_STATUS,
-    START_VALUE_LOW_LEVEL,
-    START_VALUE_MID_LEVEL,
     VALUES_FOR_LOW_LEVEL,
-    VALUES_FOR_MID_LEVEL)
+    VALUES_FOR_MID_LEVEL,
+    MAX_NORMATIVE_VALUE_LOW_LEVEL,
+    MAX_NORMATIVE_VALUE_MID_LEVEL,
+    NORMAL_VALUE_MID_LEVEL,
+    NORMAL_VALUE_LOW_LEVEL)
 from TCP_Client import connect_client, close_client, client
 
 
@@ -24,8 +25,9 @@ def test_recalculated_measured_value():
     Проверка пересчета измеренного значения(test_recalculated_measured_value).
 
     Описание:
-        Подается список значений на нижний уровень (VALUES_FOR_LOW_LEVEL).
-        После чего происходит чтение пересчитанных значений со среднего уровня (read_values_for_mid_level).
+        В цикле передаем последовательно значения аналогового параметра из списка(VALUES_FOR_LOW_LEVEL)
+        для записи на нижний уровень. # НАДО ПЕРЕФРАЗИРОВАТЬ И СВЯЗАТЬ С ИНДЕКСАМИ И ДАЛЬШЕ ПОГЛЯДЕТЬ ДОКСТРИНГ ЭТОЙ ФУНКЦИИ. ТЕЛО ВРОДЕ ПРАВИЛЬНОЕ
+        Далее считываем пересчитанное значений со среднего уровня (read_values_for_mid_level).
         и сравнение с эталонным списком значений (VALUES_FOR_MID_LEVEL).
         Если списки совпадают, то тест считается пройденным.
 
@@ -40,9 +42,15 @@ def test_recalculated_measured_value():
         3. Сравниваем полученные значения с эталонным списком VALUES_FOR_MID_LEVEL.
     '''
 
-    client.write_registers(100, VALUES_FOR_LOW_LEVEL, slave=1)
-    read_values_for_mid_level = client.read_holding_registers(100, len(VALUES_FOR_MID_LEVEL), slave=1).registers
-    assert read_values_for_mid_level == VALUES_FOR_MID_LEVEL, 'Полученные значения не совпадают с эталонными.'
+    for index in range(0, len(VALUES_FOR_LOW_LEVEL)):
+        client.write_registers(address=None, values=VALUES_FOR_LOW_LEVEL[index], slave=1)
+        read_values_for_mid_level = client.read_holding_registers(address=None, count=1, slave=1).registers
+        assert read_values_for_mid_level == VALUES_FOR_MID_LEVEL[index], (
+            'Полученные значения не совпадают с эталонными.'
+        )
+
+
+setup_limit_value()  # Установка предельных значений аналогового параметра
 
 
 def test_normal_value():
@@ -58,20 +66,24 @@ def test_normal_value():
         под ключом 'Нормальное значение'. Если списки совпадают, то тест считается пройденным.
 
     Параметры:
-        HYSTERESIS: гистерезис.
-        START_VALUE_LOW_LEVEL: значение для записи на нижний уровень.
-        START_VALUE_MID_LEVEL: эталонноеначальное значение (средний уровень).
+        NORMAL_VALUE_LOW_LEVEL: значение для записи на нижний уровень.
+        NORMAL_VALUE_MID_LEVEL: эталонноеначальное значение (средний уровень).
+        read_normal_value_mid_level: значение аналогового параметра после пересчета(средний уровень).
+        STATUS_FOR_CHECK_STATUS: Словарь для проверки статусов аналогового параметра, начиная с обрыва и заканчивая КЗ.
+
 
     Принцип работы:
-        1. Подаем значение равное (START_VALUE_LOW_LEVEL) на запись на нижний уровень.
-        2. Сравниваем полученное значение на среднем уровне с эталонным значением.
-        3. Читаем статусы аналогового параметра и сравниваем с эталонным.
+        1. Подаем значение равное (NORMAL_VALUE_LOW_LEVEL) на запись на нижний уровень.
+        2. Считываем пересчитанное значение в переменную(read_normal_value_mid_level)
+        2. Сравниваем полученное значение(read_normal_value_mid_level) с эталонным значением(NORMAL_VALUE_MID_LEVEL).
+        3. Читаем статусы(check_status) аналогового параметра и сравниваем с эталонным значением из словаря
+        STATUS_FOR_CHECK_STATUS по ключу ['Нормальное значение'].
     '''
 
-    client.write_register(100, NORMAL_VALUE_LOW_LEVEL[0], slave=1)
-    read_start_value_mid_level = client.read_holding_registers(100, 1, slave=1).registers
-    assert read_start_value_mid_level == NORMAL_VALUE_MID_LEVEL, 'Значение параметра не совпадает с эталонным.'
-    assert check_status(client=client) == STATUS_FOR_CHECK_STATUS['Нормальное значение'], (
+    client.write_register(address=None, value=NORMAL_VALUE_LOW_LEVEL, slave=1)
+    read_normal_value_mid_level = client.read_holding_registers(100, 1, slave=1).registers[0]
+    assert read_normal_value_mid_level == NORMAL_VALUE_MID_LEVEL, 'Значение параметра не совпадает с эталонным.'
+    assert check_status() == STATUS_FOR_CHECK_STATUS['Нормальное значение'], (
         'Статусы аналогового параметра не совпадают с эталонными.'
     )
 
@@ -81,33 +93,29 @@ def test_maximum_normative_value():
     Проверка максимального нормативного значения (test_maximum_normative_value).
 
     Описание:
-        Подается значение на запись на нижний уровень (MAX_NORMATIVE_VALUE_LOW_LEVEL).
-        После чего происходит чтение пересчитанных значений со среднего уровня (read_start_value_mid_level)
-        и сравнение с эталонным значением (MAX_NORMATIVE_VALUE_MID_LEVEL). Если значения совпадают, то
-        вызывается функция check_status() которая возвращает список со статусами аналогового параметра.
-        Список сравнивается с эталонным, который содержится в словаре STATUS_FOR_CHECK_STATUS
-        под ключом 'Максимальное нормативное значение'. Если списки совпадают, то тест считается пройденным.
+        Вызывается вспомогательная функция (working_with_limit_value), в которую передается 4 аргумента.
+        Функция возвращает словарь со списком статусов в различных состояниях (подробнее в описании функции).
+        Значения данного словаря сравниваются с эталонными значениями (эталонные значения
+        получены из словаря STATUS_FOR_CHECK_STATUS по ключу 'Максимальное нормативное значение'.
+        При совпадении значений, тест считается пройденным.
 
     Параметры:
-        MAX_NORMATIVE_VALUE_LOW_LEVEL: уставка максимального нормативного значения.
+        limit_value_low_level: уставка максимального нормативного значения(нижний уровень).
+        limit_value_mid_level: уставка максимального нормативного значения(верхний уровень).
+        num_registr_low_level: регистр для записи максимального нормативного значения(нижний уровень).
+        num_registr_mid_level: регистр для записи  максимального нормативного значения(верхний уровень).
 
     Принцип работы:
-        1. Подаем значение равное (START_VALUE_LOW_LEVEL) на запись на нижний уровень.
-        2. Сравниваем полученное значение на среднем уровне с эталонным значением.
-        2. Сравниваем полученное значение с эталонным значением на .
-        3. Подаем значение равное (START_VALUE - HYSTERESIS/2) на запись на нижний уровень.
-        4. Читаем статусы аналогового параметра и сравниваем с эталонным.
-        5. Подаем значение равное (START_VALUE) на запись на нижний уровень.
-        4. Читаем статусы аналогового параметра и сравниваем с эталонным.
-        5. Подаем значение равное (START_VALUE + 2 * HYSTERESIS) на запись на нижний уровень.
-        6. Читаем статусы аналогового параметра и сравниваем с эталонным.
-        7. Подаем значение равное (START_VALUE) на запись на нижний уровень.
-        8. Читаем статусы аналогового параметра и сравниваем с эталонным.
-        9. Подаем значение равное (START_VALUE - HYSTERESIS/2) на запись на нижний уровень.
-        10. Читаем статусы аналогового параметра и сравниваем с эталонным.
-        11. Подаем значение равное (START_VALUE - 2 * HYSTERESIS) на запись на нижний уровень.
+        1. Вызывается функция working_with_limit_value, в которую передается 4 аргумента.
+        Данные, возвращенные функцией, сравниваются с эталонными значениями статусов из словаря
+        STATUS_FOR_CHECK_STATUS по ключу 'Максимальное нормативное значение'.
     '''
-    check_status(client)
+
+    assert working_with_limit_value(
+        limit_value_low_level=MAX_NORMATIVE_VALUE_LOW_LEVEL,
+        limit_value_mid_level=MAX_NORMATIVE_VALUE_MID_LEVEL,
+        num_registr_low_level=None,
+        num_registr_mid_level=None) == STATUS_FOR_CHECK_STATUS['Максимальное нормативное значение']
 
 
 def test_maximum_limit_value():
