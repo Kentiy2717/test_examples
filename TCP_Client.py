@@ -2,7 +2,7 @@ import sys
 
 from pymodbus.client import ModbusTcpClient
 
-from constants import HOST, PORT
+from probably_not_used.constants import HOST, PORT
 
 
 client = ModbusTcpClient(host=HOST, port=PORT)
