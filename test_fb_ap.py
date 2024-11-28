@@ -13,7 +13,10 @@ from constants_FB_AP import (
     MAX_NORMATIVE_VALUE_LOW_LEVEL,
     MAX_NORMATIVE_VALUE_MID_LEVEL,
     NORMAL_VALUE_MID_LEVEL,
-    NORMAL_VALUE_LOW_LEVEL)
+    NORMAL_VALUE_LOW_LEVEL,
+    REGISTER_AP_LOW_LEVEL,
+    REGISTER_AP_MID_LEVEL,
+)
 from TCP_Client import connect_client, close_client, client
 
 
@@ -25,26 +28,31 @@ def test_recalculated_measured_value():
     Проверка пересчета измеренного значения(test_recalculated_measured_value).
 
     Описание:
-        В цикле передаем последовательно значения аналогового параметра из списка(VALUES_FOR_LOW_LEVEL)
-        для записи на нижний уровень. # НАДО ПЕРЕФРАЗИРОВАТЬ И СВЯЗАТЬ С ИНДЕКСАМИ И ДАЛЬШЕ ПОГЛЯДЕТЬ ДОКСТРИНГ ЭТОЙ ФУНКЦИИ. ТЕЛО ВРОДЕ ПРАВИЛЬНОЕ
+        В цикле передаем последовательно индекс, который соответствует порядковому номеру элементов в списках
+        значений аналогового параметра для нижнего и среднего уровня(VALUES_FOR_LOW_LEVEL, VALUES_FOR_MID_LEVEL).
         Далее считываем пересчитанное значений со среднего уровня (read_values_for_mid_level).
-        и сравнение с эталонным списком значений (VALUES_FOR_MID_LEVEL).
+        и сравнение с эталонным значением из списка (VALUES_FOR_MID_LEVEL[index]).
         Если списки совпадают, то тест считается пройденным.
 
     Параметры:
-        VALUES_FOR_LOW_LEVEL: список значений, которые подаются на нижний уровень.
-        VALUES_FOR_MID_LEVEL: список эталонных значений, которые должны получиться после пересчета.'
+        VALUES_FOR_LOW_LEVEL: список значений, которые подаются для записи на нижний уровень.
+        VALUES_FOR_MID_LEVEL: список эталонных значений, которые должны получиться после пересчета.
         read_values_for_mid_level: список значений, которые получаются после пересчета.
+        REGISTER_AP_LOW_LEVEL: номер регистра для чтения и записи аналогового параметра (нижний уровень).
+        REGISTER_AP_MID_LEVEL: номер регистра для чтения и записи аналогового параметра (средний уровень).
 
     Принцип работы:
-        1. Подаем значения на запись на нижний уровень.
-        2. Читаем пересчитанные значения со среднего уровня в список read_values_for_mid_level.
-        3. Сравниваем полученные значения с эталонным списком VALUES_FOR_MID_LEVEL.
+        1. Подаем значения на запись на нижний уровень в цикле.
+        2. Читаем и сохраняем пересчитанное значения со среднего уровня в переменную read_values_for_mid_level.
+        3. Сравниваем полученное значение с эталонным (VALUES_FOR_MID_LEVEL[index]).
+        4. Цикл продолжает свою работу, пока не пройдет по всем элементам списка(VALUES_FOR_LOW_LEVEL).
     '''
 
     for index in range(0, len(VALUES_FOR_LOW_LEVEL)):
-        client.write_registers(address=None, values=VALUES_FOR_LOW_LEVEL[index], slave=1)
-        read_values_for_mid_level = client.read_holding_registers(address=None, count=1, slave=1).registers
+        client.write_registers(address=REGISTER_AP_LOW_LEVEL, values=VALUES_FOR_LOW_LEVEL[index], slave=1)
+        read_values_for_mid_level = client.read_holding_registers(
+            address=REGISTER_AP_MID_LEVEL, count=1, slave=1
+        ).registers
         assert read_values_for_mid_level == VALUES_FOR_MID_LEVEL[index], (
             'Полученные значения не совпадают с эталонными.'
         )
@@ -70,18 +78,22 @@ def test_normal_value():
         NORMAL_VALUE_MID_LEVEL: эталонноеначальное значение (средний уровень).
         read_normal_value_mid_level: значение аналогового параметра после пересчета(средний уровень).
         STATUS_FOR_CHECK_STATUS: Словарь для проверки статусов аналогового параметра, начиная с обрыва и заканчивая КЗ.
+        REGISTER_AP_LOW_LEVEL: номер регистра для чтения и записи аналогового параметра (нижний уровень).
+        REGISTER_AP_MID_LEVEL: номер регистра для чтения и записи аналогового параметра (средний уровень).
 
 
     Принцип работы:
         1. Подаем значение равное (NORMAL_VALUE_LOW_LEVEL) на запись на нижний уровень.
-        2. Считываем пересчитанное значение в переменную(read_normal_value_mid_level)
+        2. Считываем и записываем пересчитанное значение в переменную(read_normal_value_mid_level)
         2. Сравниваем полученное значение(read_normal_value_mid_level) с эталонным значением(NORMAL_VALUE_MID_LEVEL).
         3. Читаем статусы(check_status) аналогового параметра и сравниваем с эталонным значением из словаря
         STATUS_FOR_CHECK_STATUS по ключу ['Нормальное значение'].
     '''
 
-    client.write_register(address=None, value=NORMAL_VALUE_LOW_LEVEL, slave=1)
-    read_normal_value_mid_level = client.read_holding_registers(100, 1, slave=1).registers[0]
+    client.write_register(address=REGISTER_AP_LOW_LEVEL, value=NORMAL_VALUE_LOW_LEVEL, slave=1)
+    read_normal_value_mid_level = client.read_holding_registers(
+        address=REGISTER_AP_MID_LEVEL, count=1, slave=1
+    ).registers[0]
     assert read_normal_value_mid_level == NORMAL_VALUE_MID_LEVEL, 'Значение параметра не совпадает с эталонным.'
     assert check_status() == STATUS_FOR_CHECK_STATUS['Нормальное значение'], (
         'Статусы аналогового параметра не совпадают с эталонными.'
@@ -94,8 +106,9 @@ def test_maximum_normative_value():
 
     Описание:
         Вызывается вспомогательная функция (working_with_limit_value), в которую передается 4 аргумента.
-        Функция возвращает словарь со списком статусов в различных состояниях (подробнее в описании функции).
-        Значения данного словаря сравниваются с эталонными значениями (эталонные значения
+        Функция возвращает список со списками статусов в различных состояниях. 
+        Подробнее о работе функции working_with_limit_value в описании к этой фунции.
+        Значения данного списка сравниваются с эталонными значениями (эталонные значения
         получены из словаря STATUS_FOR_CHECK_STATUS по ключу 'Максимальное нормативное значение'.
         При совпадении значений, тест считается пройденным.
 
