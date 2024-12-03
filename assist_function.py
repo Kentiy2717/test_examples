@@ -1,5 +1,8 @@
 import sys
 
+from pymodbus.constants import Endian
+from pymodbus.payload import BinaryPayloadBuilder, BinaryPayloadDecoder
+
 from constants_FB_AP import (
     LIST_LIMIT_VALUE_MID_LEVEL,
     HYSTERESIS_MID_LEVEL,
@@ -45,7 +48,11 @@ def setup_limit_value():
 
 def check_status():
     '''
-    Чтение статуса аналогового параметра со всех регистров(check_status).
+    Функция для чтения и записи в список статусов аналогового параметра со всех регистров(check_status).
+
+    Описание:
+        Функция создает пустой список и записывает в него значения статусов аналогового параметра проходя циклом
+        по всем регистрам из списка регисров статусов(REGISTERS_FOR_CHECK_STATUS).
 
     Параметры:
         REGISTERS_FOR_CHECK_STATUS: список регистров для проверки статуса аналогового параметра.
@@ -57,6 +64,7 @@ def check_status():
         4. Возвращаем список статусов аналогового параметра.
 
     '''
+
     list_status = []
     for register in REGISTERS_FOR_CHECK_STATUS:
         status = client.read_holding_registers(register, 1).registers[0]  # ???
@@ -64,7 +72,10 @@ def check_status():
     return list_status
 
 
-def working_with_limit_value(limit_value_low_level, limit_value_mid_level, num_registr_low_level, num_registr_mid_level):
+def working_with_limit_value(limit_value_low_level,
+                             limit_value_mid_level,
+                             num_registr_low_level,
+                             num_registr_mid_level):
     '''
     Функция для работы с уставками(working_with_limit_value).
 
@@ -88,10 +99,10 @@ def working_with_limit_value(limit_value_low_level, limit_value_mid_level, num_r
         После прохождения по циклу, функция возвращает список со статусами - list_statuses.
 
     Функция принимает один аргумента:
-        1. limit_value_low_level - предельное значение (уставка) аналогового параметра для записи на нижний уровень.
-        2. limit_value_mid_level - предельное значение (уставка) аналогового параметра для сравнения(средний уровень).
-        3. num_registr_low_level - номер регистра для записи значений на нижний уровень.
-        3. num_registr_mid_level - номер регистра для чтения значений на средний уровень.
+        limit_value_low_level - предельное значение (уставка) аналогового параметра для записи на нижний уровень.
+        limit_value_mid_level - предельное значение (уставка) аналогового параметра для сравнения(средний уровень).
+        num_registr_low_level - номер регистра для записи значений на нижний уровень.
+        num_registr_mid_level - номер регистра для чтения значений на средний уровень.
 
     Принцип работы:
         1. Создаем пустой список statuses и список с коэффициентами для расчета (coefficients).
@@ -115,3 +126,51 @@ def working_with_limit_value(limit_value_low_level, limit_value_mid_level, num_r
         else:
             list_statuses.append(f'Ошибка пересчета. Коэффициент - {coefficient}')
     return list_statuses
+
+
+# def from_binstr_in_bin():
+#     list_bytes = []
+#     list_bits = []
+#     for i in str(value_in_dec):
+#         if (i == '0' or i == '1'):
+#             list_bits.append(int(i))
+#         if len(list_bits) == 8:
+#             list_bytes.append(list_bits)
+#             list_bits = []
+#     return list_bytes
+
+
+
+
+def encode_float(float_value):
+    builder = BinaryPayloadBuilder(byteorder=Endian.BIG, wordorder=Endian.LITTLE)
+    builder.add_32bit_float(float_value)
+    payload = builder.build()
+    return payload
+
+
+def decode_float(result_read_registers):
+    decoder = BinaryPayloadDecoder.fromRegisters(result_read_registers.registers, Endian.BIG, wordorder=Endian.LITTLE)
+    return decoder.decode_32bit_float()
+
+
+def decode_uint(result_read_registers):
+    decoder = BinaryPayloadDecoder.fromRegisters(result_read_registers.registers, Endian.BIG, wordorder=Endian.LITTLE)
+    return decoder.decode_32bit_uint()
+
+def encode_int(result_read_registers):
+    decoder = BinaryPayloadDecoder.fromRegisters(result_read_registers.registers, Endian.BIG, wordorder=Endian.LITTLE)
+    return decoder.decode_16bit_uint()
+
+
+def decode_bits(result_read_registers):
+    list_bits = []
+    package_len = [3, 4, 1, 2]
+    for len in package_len:
+        decoder = BinaryPayloadDecoder.fromRegisters(
+            result_read_registers.registers,
+            byteorder=Endian.BIG,
+            wordorder=Endian.LITTLE
+        )
+        list_bits.append((decoder.decode_bits(package_len=len))[::-1])
+    return list_bits

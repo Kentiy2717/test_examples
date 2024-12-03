@@ -14,8 +14,8 @@ from constants_FB_AP import (
     MAX_NORMATIVE_VALUE_MID_LEVEL,
     NORMAL_VALUE_MID_LEVEL,
     NORMAL_VALUE_LOW_LEVEL,
-    REGISTER_AP_LOW_LEVEL,
-    REGISTER_AP_MID_LEVEL,
+    INPUT,
+    OUT,
 )
 from TCP_Client import connect_client, close_client, client
 
@@ -38,8 +38,8 @@ def test_recalculated_measured_value():
         VALUES_FOR_LOW_LEVEL: список значений, которые подаются для записи на нижний уровень.
         VALUES_FOR_MID_LEVEL: список эталонных значений, которые должны получиться после пересчета.
         read_values_for_mid_level: список значений, которые получаются после пересчета.
-        REGISTER_AP_LOW_LEVEL: номер регистра для чтения и записи аналогового параметра (нижний уровень).
-        REGISTER_AP_MID_LEVEL: номер регистра для чтения и записи аналогового параметра (средний уровень).
+        INPUT: номер регистра для чтения и записи аналогового параметра (нижний уровень).
+        OUT: номер регистра для чтения и записи аналогового параметра (средний уровень).
 
     Принцип работы:
         1. Подаем значения на запись на нижний уровень в цикле.
@@ -49,16 +49,16 @@ def test_recalculated_measured_value():
     '''
 
     for index in range(0, len(VALUES_FOR_LOW_LEVEL)):
-        client.write_registers(address=REGISTER_AP_LOW_LEVEL, values=VALUES_FOR_LOW_LEVEL[index], slave=1)
+        client.write_registers(address=INPUT, values=VALUES_FOR_LOW_LEVEL[index], slave=1)
         read_values_for_mid_level = client.read_holding_registers(
-            address=REGISTER_AP_MID_LEVEL, count=1, slave=1
+            address=OUT, count=2, slave=1
         ).registers
         assert read_values_for_mid_level == VALUES_FOR_MID_LEVEL[index], (
             'Полученные значения не совпадают с эталонными.'
         )
 
 
-setup_limit_value()  # Установка предельных значений аналогового параметра
+# setup_limit_value()  # Установка предельных значений аналогового параметра
 
 
 def test_normal_value():
@@ -78,8 +78,8 @@ def test_normal_value():
         NORMAL_VALUE_MID_LEVEL: эталонноеначальное значение (средний уровень).
         read_normal_value_mid_level: значение аналогового параметра после пересчета(средний уровень).
         STATUS_FOR_CHECK_STATUS: Словарь для проверки статусов аналогового параметра, начиная с обрыва и заканчивая КЗ.
-        REGISTER_AP_LOW_LEVEL: номер регистра для чтения и записи аналогового параметра (нижний уровень).
-        REGISTER_AP_MID_LEVEL: номер регистра для чтения и записи аналогового параметра (средний уровень).
+        INPUT: номер регистра для чтения и записи аналогового параметра (нижний уровень).
+        OUT: номер регистра для чтения и записи аналогового параметра (средний уровень).
 
 
     Принцип работы:
@@ -90,9 +90,9 @@ def test_normal_value():
         STATUS_FOR_CHECK_STATUS по ключу ['Нормальное значение'].
     '''
 
-    client.write_register(address=REGISTER_AP_LOW_LEVEL, value=NORMAL_VALUE_LOW_LEVEL, slave=1)
+    client.write_register(address=INPUT, value=NORMAL_VALUE_LOW_LEVEL, slave=1)
     read_normal_value_mid_level = client.read_holding_registers(
-        address=REGISTER_AP_MID_LEVEL, count=1, slave=1
+        address=OUT, count=1, slave=1
     ).registers[0]
     assert read_normal_value_mid_level == NORMAL_VALUE_MID_LEVEL, 'Значение параметра не совпадает с эталонным.'
     assert check_status() == STATUS_FOR_CHECK_STATUS['Нормальное значение'], (
@@ -143,12 +143,6 @@ def test_upper_limit_of_measurement():
     '''Проверка верхнего предела измерения(Короткое замыкание).'''
 
 
-def test_return_to_normal_value():
-    '''
-    Проверка смены статусов при возвращении значения в норму(test_return_to_normal_value).
-    '''
-
-
 def test_minimum_normative_value():
     '''Проверка минимального нормативного значения.'''
 
@@ -165,6 +159,33 @@ def test_lower_limit_of_measurement():
     '''Проверка нижнего предела измерения(Обрыв).'''
 
 
+def test_work_mode():
+    '''
+    Проверка режима "Полевая обработка"(test_work_mode).
+
+    Описание:
+        Вызывается вспомогательная функция (working_with_limit_value), в которую передается 4 аргумента.
+        Функция возвращает список со списками статусов в различных состояниях. 
+        Подробнее о работе функции working_with_limit_value в описании к этой фунции.
+        Значения данного списка сравниваются с эталонными значениями (эталонные значения
+        получены из словаря STATUS_FOR_CHECK_STATUS по ключу 'Максимальное нормативное значение'.
+        При совпадении значений, тест считается пройденным.
+
+    Параметры:
+        limit_value_low_level: уставка максимального нормативного значения(нижний уровень).
+        limit_value_mid_level: уставка максимального нормативного значения(верхний уровень).
+        num_registr_low_level: регистр для записи максимального нормативного значения(нижний уровень).
+        num_registr_mid_level: регистр для записи  максимального нормативного значения(верхний уровень).
+
+    Принцип работы:
+        1. Вызывается функция working_with_limit_value, в которую передается 4 аргумента.
+        Данные, возвращенные функцией, сравниваются с эталонными значениями статусов из словаря
+        STATUS_FOR_CHECK_STATUS по ключу 'Максимальное нормативное значение'.
+    '''
+
+
+
+
 
 
 
@@ -173,10 +194,6 @@ def test_lower_limit_of_measurement():
 
 def test_simulation_mode():
     '''Проверка режима "Имитация".'''
-
-
-def test_work_mode():
-    '''Проверка режима "Полевая обработка".'''
 
 
 def test_test_mode():
