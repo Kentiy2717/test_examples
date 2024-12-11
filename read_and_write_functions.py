@@ -1,11 +1,58 @@
-from constants_FB_AP import CMDOP_REGISTER, CMDOP_MSG_OFF
-from TCP_Client import client
+from probably_not_used.constants import SLAVE
+from wrappers import sleep_time_after_operation
 
-def this_is_write_error(address, value):
-    return client.write_register(address=address, value=value).isError()
+from encode_and_decode import encode_float, encode_int, decode_float
+from probably_not_used.TCP_Client import client
+from constants_FB_AP import (
+    REGISTERS_AND_VALUE_WRITE_FOR_BEGIN_TEST as LEGS,
+)
 
-def this_is_read_error():
-    pass
 
-def read_holding_registers():
-    pass
+@sleep_time_after_operation
+def this_is_write_error(address, value, slave=SLAVE):
+    if type(value) is int:
+        return client.write_registers(address=address, values=encode_int(value), slave=slave).isError()
+    elif type(value) is float:
+        return client.write_registers(address=address, values=encode_float(value), slave=slave).isError()    
+    elif type(value) is bool:
+        return client.write_coil(address=address, value=value, slave=slave).isError()
+    
+
+
+def this_is_read_error(address, count, slave=SLAVE):
+    return client.read_holding_registers(address=address, count=count, slave=slave).isError()
+
+
+@sleep_time_after_operation
+def write_coil(address, value, slave=1):
+    return client.write_coil(address=address, value=value, slave=slave)
+
+
+@sleep_time_after_operation
+def read_coils(address, count, slave=1):
+    return client.read_coils(address=address, count=count, slave=slave)
+
+
+@sleep_time_after_operation
+def write_holding_register(address, value, slave=1):
+    return client.write_register(address=address, value=value, slave=slave)
+
+
+@sleep_time_after_operation
+def write_holding_registers(address, values, slave=1):
+    return client.write_registers(address=address, values=encode_float(values), slave=slave)
+
+
+def read_holding_registers(address, count, slave=1):
+    return client.read_holding_registers(address=address, count=count, slave=slave)
+
+
+def read_float(address: int):
+    return decode_float(read_holding_registers(address=address, count=2))
+
+
+@sleep_time_after_operation
+def reset_CmdOp():
+    write_holding_register(address=LEGS['CmdOp']['register'], value=0)
+
+

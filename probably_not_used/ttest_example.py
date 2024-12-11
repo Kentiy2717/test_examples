@@ -1,4 +1,4 @@
-from TCP_Client import connect_client, close_client, client
+from probably_not_used.TCP_Client import connect_client, close_client, client
 from probably_not_used.color_print import print_error
 from constants import (
     CHECK_VALUE_WRITE_COILS,
