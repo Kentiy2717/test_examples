@@ -73,9 +73,11 @@ def read_all_messages():  # Работает
 
 
 def read_new_messages(old_messages):  # Работает
+    '''Возвращает отсортированный список с новыми сообщениями'''
     now_messages = read_all_messages()
     new_messages = []
     for i in range(0, 50):
         if now_messages[i] != old_messages[i]:
             new_messages.append(now_messages[i][0])
+    new_messages.sort()
     return new_messages

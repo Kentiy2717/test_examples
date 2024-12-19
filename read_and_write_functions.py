@@ -4,6 +4,7 @@ from wrappers import sleep_time_after_operation
 from encode_and_decode import encode_float, encode_int, decode_float
 from probably_not_used.TCP_Client import client
 from constants_FB_AP import (
+    CMDOP,
     REGISTERS_AND_VALUE_WRITE_FOR_BEGIN_TEST as LEGS,
 )
 
@@ -35,6 +36,7 @@ def read_coils(address, count, slave=1):
 
 @sleep_time_after_operation
 def write_holding_register(address, value, slave=1):
+    '''В CmdOp писать через нее!'''
     return client.write_register(address=address, value=value, slave=slave)
 
 
@@ -47,12 +49,27 @@ def read_holding_registers(address, count, slave=1):
     return client.read_holding_registers(address=address, count=count, slave=slave)
 
 
+def read_discrete_inputs(address, count, bit=None, slave=1):
+    if bit is not None:
+        return client.read_discrete_inputs(address=address, count=count, slave=slave).bits[bit]
+    else:
+        return client.read_discrete_inputs(address=address, count=count, slave=slave)
+
+
 def read_float(address: int):
     return decode_float(read_holding_registers(address=address, count=2))
 
 
 @sleep_time_after_operation
 def reset_CmdOp():
+    '''Обнуляет CmdOp.'''
+
     write_holding_register(address=LEGS['CmdOp']['register'], value=0)
 
 
+@sleep_time_after_operation
+def write_CmdOp(command=0):
+    '''Обнуляет CmdOp, а потом записывает значение переданнов в value.'''
+
+    reset_CmdOp()
+    write_holding_register(address=LEGS['CmdOp']['register'], value=CMDOP[command])

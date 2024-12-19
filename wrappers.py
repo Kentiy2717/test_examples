@@ -85,11 +85,11 @@ def reset_initial_values(func):
 
             # Если перзаписываем ножки из списка, то необходимо записать сначала False, True, False.
             # Это связано с особенностями перезаписи этих ножек после ребута ПЛК.
-            if name in [#'AlarmOff', 'ChFlt', 'ModFlt', 'SensFlt', 'ExtFlt',
-                        'ALLimEn', 'WLLimEn', 'TLLimEn', 'THLimEn', 'WHLimEn', 'AHLimEn']:
+            if name in ['ALLimEn', 'WLLimEn', 'TLLimEn', 'THLimEn', 'WHLimEn', 'AHLimEn']:
                 this_is_write_error(address=reg_and_val['register'], value=True)
                 this_is_write_error(address=reg_and_val['register'], value=False)
         switch_position(command='MsgOff', required_bool_value=False)
+        switch_position(command='SpeedOff', required_bool_value=False)
         result = func(*args, **kwargs)
         return result
     return wrapper
