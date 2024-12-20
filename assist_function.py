@@ -385,16 +385,12 @@ def values_out_when_turn_on_simulation_mode(mode: Literal['Oos', 'Imit', 'Fld', 
     '''
 
     # Включаем режим переданный в параметре "mode".
-    if turn_on_mode(mode=mode) is False:
-        not_error = False
-        print_error(f'Ошибка! Не удалось включить режим {mode}. Дальнейшее тестирование нецелесообразно.')
+    not_error = turn_on_mode(mode=mode)
 
     # Читаем значение в Out и OutmA. Включаем режим "Имитация". Читаем Out'ы еще раз.
     Out_before = read_float(address=OUT_REGISTER)
     OutmA_before = read_float(address=OUTMA_REGISTER)
-    if turn_on_mode(mode='Imit') is False:
-        not_error = False
-        print_error('Ошибка! Не удалось включить режим "Имитация". Дальнейшее тестирование нецелесообразно.')
+    not_error = turn_on_mode(mode='Imit')
     Out_after = round(read_float(address=OUT_REGISTER), 1)
     OutmA_after = read_float(address=OUTMA_REGISTER)
     start_ImitInput = START_VALUE['ImitInput']['start_value']

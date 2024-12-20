@@ -34,6 +34,7 @@ START_VALUE = {
 }
 
 SETPOINT_VALUE_COMMANDS = ['AHLim', 'WHLim', 'THLim', 'TLLim', 'WLLim', 'ALLim']
+WORK_MODES = ['Oos', 'Imit', 'Fld', 'Tst']
 
 
 # Словарь с номерами регистров ([REGISTER]), со значениями для проверки ([VALUE][0], [VALUE][1]) и

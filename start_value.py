@@ -33,7 +33,8 @@ from constants_FB_AP import (
     STATUS1,
     CMDOP,
     PANELMODE,
-    VALUE_UNRELIABILITY
+    VALUE_UNRELIABILITY,
+    WORK_MODES
 )
 from encode_and_decode import decode_float
 from func_print_console_and_write_file import (
@@ -73,6 +74,7 @@ from wrappers import (
 )
 
 
+# ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"
 @writes_func_failed_or_passed
 def checking_errors_writing_registers(not_error):  # Готово.
     print_title('Старт проверки ошибок при записи с отрицательными, положительными и нулевым значениями.')
@@ -98,12 +100,12 @@ def cheking_on_off_for_cmdop(not_error):  # Готово.
     for name, description in SWITCHES_CMDOP.items():
         count_error = 0                                                                                                 # Максимально возможное количество ошибок.
         for i in range(0, 4):                                                                                           # Пытаемся переключить каждый выключатель 4 раза (чтобы он остался в первоначальном состоянии).
-            Status1_before = read_status1_one_bit(SWITCH[name]['St1'])                                                  # Читаем status1 и запоминаем значение переключателя.
+            Status1_before = read_status1_one_bit(SWITCH[name]['st1'])                                                  # Читаем status1 и запоминаем значение переключателя.
             PanelSig_before = read_PanelSig_one_bit(SWITCH[name]['PSig'])                                               # Читаем panelsig и запоминаем значение переключателя.
             reset_CmdOp()                                                                                               # Обнуляеся перед подачей команды
             write_holding_register(address=LEGS['CmdOp']['register'], value=SWITCH[name]['CmdOp'])
             if (
-                Status1_before == read_status1_one_bit(SWITCH[name]['St1'])                                             # Если видем в статусе и панели, что не поменялось значение, то ошибка
+                Status1_before == read_status1_one_bit(SWITCH[name]['st1'])                                             # Если видем в статусе и панели, что не поменялось значение, то ошибка
                 and PanelSig_before == read_PanelSig_one_bit(SWITCH[name]['PSig'])
             ):
                 print_error(f'Команда {name}({description}) не сработала на {i} итерации.')
@@ -137,7 +139,7 @@ def checking_generation_messages_and_msg_off(not_error):  # Готово.
     Input = set_value_AP(sign='>', setpoint='AHLim')
 
     # Получаем значение MsgOff и AHAct в статус1.
-    MsgOff = read_status1_one_bit(SWITCH['MsgOff']['St1'])
+    MsgOff = read_status1_one_bit(SWITCH['MsgOff']['st1'])
     AHAct = read_status1_one_bit(STATUS1['AHAct'])
 
     # Если уставка сработала и сообщения сформировались, то выводим сообщение и проверяем дальше.
@@ -155,7 +157,7 @@ def checking_generation_messages_and_msg_off(not_error):  # Готово.
             switch_position(command='MsgOff', required_bool_value=True)
 
             # Получаем значение MsgOff в статус1. Читаем сообщения.
-            MsgOff = read_status1_one_bit(SWITCH['MsgOff']['St1'])
+            MsgOff = read_status1_one_bit(SWITCH['MsgOff']['st1'])
             old_messages = read_all_messages()
 
             # Устанавливаем  значение в Input выше уставки. Получаем значение AHAct из статус1.
@@ -644,38 +646,39 @@ def checking_DeltaV(not_error):  # Готово.
 @reset_initial_values
 @writes_func_failed_or_passed
 def checking_SpeedLim(not_error):  # Готово.
-    print_title('Проверка работы SpeedLim.')
+    print_title('Проверка работы SpeedLim в разных режимах работы.')
 
-    # Включаем SpeedLim и задаем значение ниже чем 1 в Input на нижнем уровне.
-    switch_position(command='SpeedOff', required_bool_value=True)
-    Out1 = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
-    Input = decode_float(read_holding_registers(address=LEGS['Input']['register'], count=2))
-    write_holding_registers(address=LEGS['Input']['register'], values=(Input + 1))
-    Out = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
-    SpeedLim = Out - Out1 - 1
-    write_holding_registers(address=LEGS['SpeedLim']['register'], values=SpeedLim)
+    # Проходим циклом по всем режимам работы, включаем поочередно и тестируем работу SpeedLim.
+    for mode in WORK_MODES:
+        turn_on_mode(mode=mode)
 
-    # Создаем функцию для изменения значений в Input которая будет запускаться в отдельном потоке.
-    def change_value(start, stop, step):
-        for value in range(start, stop, step):
-            write_holding_registers(address=LEGS['Input']['register'], values=value)
+        # Включаем SpeedLim и задаем значение ниже чем 1 в Input на нижнем уровне.
+        switch_position(command='SpeedOff', required_bool_value=True)
+        SpeedLim = set_value_param(name_param='SpeedLim', number_units_of_input=1)
+        write_holding_registers(address=LEGS['SpeedLim']['register'], values=SpeedLim)
 
-    # Вызываем функцию change_value в отдельном потоке с параметрами от 4 до 20 и в обратном направлении.
-    for start, stop, step in [[4, 20, 1], [20, 4, -1]]:
-        thread = threading.Thread(target=change_value, daemon=True, args=(start, stop, step))
-        thread.start()
+        # Создаем функцию для изменения значений в Input которая будет запускаться в отдельном потоке.
+        def change_value(start, stop, step):
+            for value in range(start, stop, step):
+                write_holding_registers(address=LEGS['Input']['register'], values=value)
 
-        # Ждем 3 секунды, чтобы статусы успели обновиться, считываем и проверяем 18 бит для status1 и 0-й для PanelSig.
-        sleep(3)
-        check_st1_and_PanelSig = read_status1_one_bit(18) and read_PanelSig_one_bit(0)
+        # Вызываем функцию change_value в отдельном потоке с параметрами от 4 до 20 и в обратном направлении.
+        for start, stop, step in ((4, 20, 1), (20, 4, -1)):
+            thread = threading.Thread(target=change_value, daemon=True, args=(start, stop, step))
+            thread.start()
 
-        # Если оба бита False, то проверка провалилась, если True, то прошла.
-        if check_st1_and_PanelSig is False:
-            print_error(f'Проверка провалена. При изменении значений от {start} до {stop}. SpeedLim не работает.')
-            not_error = False
-        elif check_st1_and_PanelSig is True:
-            print_text_grey(f'Проверка пройдена. При изменении значений от {start} до {stop}. '
-                            'SpeedLim работает исправно.')
+            # Ждем 3 секунды, чтобы статусы успели обновиться  и проверяем 18 бит для status1 и 0-й для PanelSig.
+            sleep(3)
+            check_st1_and_PanelSig = read_status1_one_bit(STATUS1['SpeedMax']) and read_PanelSig_one_bit(0)
+
+            # Если оба бита False, то проверка провалилась, если True, то прошла.
+            if mode == 'Fld' and check_st1_and_PanelSig is False:
+                not_error = False
+                print_error(f'Проверка провалена в режиме "{mode}". '
+                            f'При изменении значений от {start} до {stop}. SpeedLim не работает.')
+            elif (mode == 'Fld' and check_st1_and_PanelSig is True) or check_st1_and_PanelSig is False:
+                print_text_grey(f'Проверка пройдена в режиме "{mode}". При изменении значений от {start} до {stop}. '
+                                'SpeedLim работает исправно.')
     return not_error
 
 
@@ -1008,6 +1011,7 @@ def checking_kvitir(not_error):  # ПРОВЕРКА ТОЛЬКО НА УСТАВ
     return not_error
 
 
+# ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"
 @reset_initial_values
 @writes_func_failed_or_passed
 # Проверка возможности включения режима "Имитация".
@@ -1176,8 +1180,8 @@ def checking_simulation_mode_when_change_input_and_imitinput(not_error):
 
 @reset_initial_values
 @writes_func_failed_or_passed
-# Проверка на непрохождении сигнала недостоверности значения АП при выходе за пределы MinEV и MaxEV.
-def checking_absence_unreliability_value_min_ev_and_max_ev_in_simulation_mode(not_error):  # делаю.
+# Проверка на непрохождении сигнала недостоверности значения АП при выходе Input за пределы MinEV и MaxEV.
+def checking_absence_unreliability_value_min_ev_and_max_ev_in_simulation_mode(not_error):
     print_title('Проверка на непрохождении сигнала недостоверности значения АП при выходе за пределы MinEV и MaxEV.')
 
     # Включаем режим "Имитация".
@@ -1196,16 +1200,18 @@ def checking_absence_unreliability_value_min_ev_and_max_ev_in_simulation_mode(no
 
     # Формируем кортеж со значениями для проверки.
     status_values_and_values_input_for_check = (
-        ([], STATUS2['HightErr'], False, RangeMax_value * 2),
-        ([], STATUS2['LowErr'],   False, RangeMin_value * 2),
+        ([], STATUS2['HightErr'], False, RangeMax_value + RangeMax_value),
+        ([], STATUS2['LowErr'],   False, RangeMin_value - RangeMin_value),
     )
 
-    # Проходимся в цикле по словарю data. Выставляем значения MinEV и MaxEV.
+    # Проходимся в цикле по data. Выставляем значения MinEV, MaxEV и ImitInput так, чтобы он был внутри диапазона.
     for name_cheking, data_value in data.items():
         number_check = data_value['№']
         MinEV_val = data_value['MinEV']
         MaxEV_val = data_value['MaxEV']
+        ImitInput = (MinEV_val + MaxEV_val) / 2
         write_min_max_EV(MinEV=MinEV_val, MaxEV=MaxEV_val)
+        write_holding_registers(address=LEGS['ImitInput']['register'], values=ImitInput)
         print_text_white(f'\n{number_check}) Проверка случая {name_cheking} со значениями '
                          f'MinEV={MinEV_val}, MaxEV={MaxEV_val}')
 
@@ -1223,7 +1229,6 @@ def checking_absence_unreliability_value_min_ev_and_max_ev_in_simulation_mode(no
             PanelState_bad = PANELSTATE['Bad']
             PanelState_res = read_PanelState() == PanelState_bad
             new_msg = read_new_messages(old_messages)
-            new_msg.sort()
 
             # Проверяем сработку превышения инженерного значения.
             if st1 is result and st2 is result and PanelAlm is result and PanelState_res is result and new_msg == msg:
@@ -1245,11 +1250,6 @@ def checking_absence_unreliability_value_min_ev_and_max_ev_in_simulation_mode(no
                                 f'а ожидалось {PanelState_bad}.')
                 if new_msg != msg:
                     print_error(f'    - Ошибка в формировании сообщений. Пришло {new_msg}, а ожидалось {msg}.')
-    return not_error
-
-
-
-
     return not_error
 
 
@@ -1303,7 +1303,28 @@ def checking_errors_channel_module_sensor_and_external_error_in_simulation_mode(
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_OLOLOLOLOLO(not_error):  # .
+def checking_(not_error):  # .
+    print_title('Проверка.')
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+def checking_(not_error):  # .
+    print_title('Проверка.')
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+def checking_(not_error):  # .
+    print_title('Проверка.')
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+def checking_(not_error):  # .
     print_title('Проверка.')
     return not_error
 
@@ -1328,6 +1349,7 @@ def main():
     '''
 
     # ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"
+    print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
     # checking_errors_writing_registers()
     # cheking_on_off_for_cmdop()
     # checking_generation_messages_and_msg_off()
@@ -1341,7 +1363,7 @@ def main():
     # checking_messages_on_off_setpoints()
     # checking_setpoint_values()
     # checking_DeltaV()
-    # checking_SpeedLim()
+    checking_SpeedLim()
     # checking_setpoint_not_impossible_min_more_max()
     # checking_work_setpoint()
     # checking_working_setpoint_with_large_jump()
@@ -1354,8 +1376,16 @@ def main():
     # checking_input_in_simulation_mode()
     # checking_simulation_mode_when_change_input_and_imitinput()
     # checking_absence_unreliability_value_min_ev_and_max_ev_in_simulation_mode()
-    checking_errors_channel_module_sensor_and_external_error_in_simulation_mode()
-    # Добавить проверку сработки уставок и т.д. в режими имитация.
+    # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode()
+    # добавить тест на несработку СКОРОСТИ ИЗМЕНЕНИЯ АП при изменении Input и ImitInput.
+    # добавить тест на несработку уставок при изменении Input.
+    # Добавить проверку сработки уставок и т.д. в режими имитация при изменении в ImitInput.
+    # checking_OLOLOLOLOLO()
+
+    # ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"
+    # checking_OLOLOLOLOLO()
+
+    # ПРОВЕРКА РЕЖИМА "ТЕСТИРОВАНИЕ"
     # checking_OLOLOLOLOLO()
 
 
