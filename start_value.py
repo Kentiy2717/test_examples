@@ -17,6 +17,7 @@ from assist_function import (
     )
 from probably_not_used.constants import DETAIL_REPORT_ON
 from constants_FB_AP import (
+    BAD_REGISTER,
     INPUT_REGISTER,
     PANELSIG,
     PANELSTATE,
@@ -26,6 +27,7 @@ from constants_FB_AP import (
     MINEV_REGISTER,
     MAXEV_REGISTER,
     SETPOINT_VALUE_COMMANDS,
+    SPEED_ACT_REGISTER,
     START_VALUE,
     STATUS2,
     SWITCHES_CMDOP,
@@ -74,7 +76,6 @@ from wrappers import (
 )
 
 
-# ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"
 @writes_func_failed_or_passed
 def checking_errors_writing_registers(not_error):  # Готово.
     print_title('Старт проверки ошибок при записи с отрицательными, положительными и нулевым значениями.')
@@ -265,11 +266,11 @@ def checking_operating_modes(not_error):  # Готово.
     print_title('Старт проверки возможности включения режимов командой на CmdOp.')
     # Создаем словарь для проверки с наименованиями команд режимов и сообщений при переходе на данные режимы.
     data = {
-        'Oos':   {'PanelSig': 1,  'messages': [20100]},
-        'Imit':  {'PanelSig': 2,  'messages': [2, 51, 20200]},
-        'Tst':   {'PanelSig': 4,  'messages': [5, 52, 20500]},
-        'Fld':   {'PanelSig': 3,  'messages': [4, 55, 20400]},
-        'Imit1': {'PanelSig': 2,  'messages': [2, 54, 20200]},
+        'Oos':   {'PanelMode': 1,  'messages': [20100]},
+        'Imit':  {'PanelMode': 2,  'messages': [2, 51, 20200]},
+        'Tst':   {'PanelMode': 4,  'messages': [5, 52, 20500]},
+        'Fld':   {'PanelMode': 3,  'messages': [4, 55, 20400]},
+        'Imit1': {'PanelMode': 2,  'messages': [2, 54, 20200]},
     }
     Imit1 = 0  # переменная для получения значений при втором проходе Imit1.
     # Перебираем в цикле команды для включения режимов (Oos, Imit, Tst, Fld, Imit).
@@ -282,18 +283,18 @@ def checking_operating_modes(not_error):  # Готово.
         # Каждый проход через 'Imit' увеличиваем Imit1 на 1.
         Imit1 += 1 if command == 'Imit' else 0
 
-        # Читаем новые сообщения, status1 и PanelSig.
+        # Читаем новые сообщения, status1 и PanelMode.
         new_messages = read_new_messages(old_messages)
         new_messages.sort()
         status1 = read_status1_one_bit(STATUS1[command])
-        PanelSig = read_PanelMode()
+        PanelMode = read_PanelMode()
 
         # Если это второй проход через 'Imit', то меняем command.
         command = 'Imit1' if Imit1 == 2 else command
 
-        # Проверяем активацию режимов по сообщениям, status1 и PanelSig. Если соответствуют ожидаемым
+        # Проверяем активацию режимов по сообщениям, status1 и PanelMode. Если соответствуют ожидаемым
         # значениям из словаря data, то проверка пройдена.
-        if new_messages == data[command]['messages'] and status1 is True and PanelSig == data[command]['PanelSig']:
+        if new_messages == data[command]['messages'] and status1 is True and PanelMode == data[command]['PanelMode']:
             print_text_grey(f'Режим {command} успешно активирован. Проверка пройдена.')
         else:
             print_error(f'Ошибка! Режим {command} не активирован. {new_messages}')
@@ -400,7 +401,7 @@ def checking_not_impossible_min_ev_more_max_ev(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_errors_channel_module_sensor_and_external_error(not_error):  # Готово.
+def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_error):  # Готово.
     print_title('Проверка сработки ошибок канала, модуля, сенсора и внешней ошибки.')
 
     # Создаем словарь с данными для проверки. Ключи - ошибки, знач. списки значений сообщений.
@@ -411,94 +412,99 @@ def checking_errors_channel_module_sensor_and_external_error(not_error):  # Го
         'ExtFlt':   {'bit': 3, 'msg_by_True': [210, 212], 'msg_by_False': [111, 260, 262]}
     }
 
-    # Проходим по значениям словаря с наименованием ошибок.
-    for name, msg in data.items():
+    # Проверяем в цикле режим "Полевая обработка" и "Тестирование".
+    for mode in ('Fld', 'Tst'):
+        turn_on_mode(mode=mode)
+        print_text_white(f'Режим {mode}.')
 
-        # ПРОВЕРКА ВКЛЮЧЕНИЯ.
-        # Читаем сообщения dыбираем какой бит смотреть в status2 и PanelAlm.
-        old_message = read_all_messages()
-        bit = data[name]['bit']
-        #  Переключаем значение ошибки в True. Проверяем что ошибки записи нет.
-        if this_is_write_error(address=START_VALUE[name]['register'], value=True) is True:
-            print_error(f'Ошибка записи значения False в {name}. Проверьте адрес регистра.')
-            not_error = False
-            continue
+        # Проходим по значениям словаря с наименованием ошибок.
+        for name, msg in data.items():
 
-        # Читаем сообщения, создаем счетчик ошибок.
-        new_messages = read_new_messages(old_message)
-        standart_msg = msg['msg_by_True']
-        count_error = 0
+            # ПРОВЕРКА ВКЛЮЧЕНИЯ.
+            # Читаем сообщения dыбираем какой бит смотреть в status2 и PanelAlm.
+            old_message = read_all_messages()
+            bit = data[name]['bit']
+            #  Переключаем значение ошибки в True. Проверяем что ошибки записи нет.
+            if this_is_write_error(address=START_VALUE[name]['register'], value=True) is True:
+                print_error(f'Ошибка записи значения False в {name}. Проверьте адрес регистра.')
+                not_error = False
+                continue
 
-        # Если сообщения не совпадают с ожидаемыми, то ошибка.
-        if new_messages != standart_msg:
-            print_error(f'Ошибка включения {name}! Сообщения не соответствуют ожидаемым.'
-                        f'Пришло {new_messages}, а ожидалось {standart_msg}.')
-            count_error += 1
-        # Если значение битов status1(7), status2(bit), PanelAlm(bit) - False, то ошибка.
-        if read_status1_one_bit(7) is False:
-            print_error(f'Ошибка включения {name}! 7 бит status1={read_status1_one_bit(7)}.')
-            count_error += 1
-        if read_status2_one_bit(bit) is False:
-            print_error(f'Ошибка включения {name}! {bit} бит status2={read_status2_one_bit(bit)}.')
-            count_error += 1
-        if read_PanelAlm_one_bit(bit) is False:
-            print_error(f'Ошибка включения {name}! {bit} бит PanelAlm={read_PanelAlm_one_bit(bit)}.')
-            count_error += 1
+            # Читаем сообщения, создаем счетчик ошибок.
+            new_messages = read_new_messages(old_message)
+            standart_msg = msg['msg_by_True']
+            count_error = 0
 
-        # Если count_error = 0 то проверка прошла успешно, если 4, то полностью провалилась, если 1-3 то частично.
-        if count_error == 0:
-            print_text_grey(f'Проверка включиния {name} прошла успешно.')
-        elif count_error in (1, 2, 3):
-            print_text_grey(f'Проверка включиния {name} частично провалена. Подробности выше.')
-            not_error = False
-        elif count_error == 4:
-            print_error(f'Проверка включиния {name} провалена.')
-            not_error = False
-        else:
-            print_error(f'Неизвестная ошибка при проверке включиния {name}. '
-                        f'Проверь работу тестов count_error={count_error}.')
+            # Если сообщения не совпадают с ожидаемыми, то ошибка.
+            if new_messages != standart_msg:
+                print_error(f'Ошибка включения {name}! Сообщения не соответствуют ожидаемым.'
+                            f'Пришло {new_messages}, а ожидалось {standart_msg}.')
+                count_error += 1
+            # Если значение битов status1(7), status2(bit), PanelAlm(bit) - False, то ошибка.
+            if read_status1_one_bit(7) is False:
+                print_error(f'Ошибка включения {name}! 7 бит status1={read_status1_one_bit(7)}.')
+                count_error += 1
+            if read_status2_one_bit(bit) is False:
+                print_error(f'Ошибка включения {name}! {bit} бит status2={read_status2_one_bit(bit)}.')
+                count_error += 1
+            if read_PanelAlm_one_bit(bit) is False:
+                print_error(f'Ошибка включения {name}! {bit} бит PanelAlm={read_PanelAlm_one_bit(bit)}.')
+                count_error += 1
 
-        # ПРОВЕРКА ОТКЛЮЧЕНИЯ.
-        old_message = read_all_messages()
-        # Читаем сообщения. Переключаем значение ошибки в False. Проверяем что ошибки записи нет.
-        if this_is_write_error(address=START_VALUE[name]['register'], value=False) is True:
-            print_error(f'Ошибка записи значения False в {name}. Проверьте адрес регистра.')
-            not_error = False
-            continue
+            # Если count_error = 0 то проверка прошла успешно, если 4, то полностью провалилась, если 1-3 то частично.
+            if count_error == 0:
+                print_text_grey(f'Проверка включиния {name} прошла успешно.')
+            elif count_error in (1, 2, 3):
+                print_text_grey(f'Проверка включиния {name} частично провалена. Подробности выше.')
+                not_error = False
+            elif count_error == 4:
+                print_error(f'Проверка включиния {name} провалена.')
+                not_error = False
+            else:
+                print_error(f'Неизвестная ошибка при проверке включиния {name}. '
+                            f'Проверь работу тестов count_error={count_error}.')
 
-        # Читаем сообщения, обнуляем счетчик ошибок.
-        new_messages = read_new_messages(old_message)
-        standart_msg = msg['msg_by_False']
-        count_error = 0
+            # ПРОВЕРКА ОТКЛЮЧЕНИЯ.
+            old_message = read_all_messages()
+            # Читаем сообщения. Переключаем значение ошибки в False. Проверяем что ошибки записи нет.
+            if this_is_write_error(address=START_VALUE[name]['register'], value=False) is True:
+                print_error(f'Ошибка записи значения False в {name}. Проверьте адрес регистра.')
+                not_error = False
+                continue
 
-        # Если сообщения не совпадают с ожидаемыми, то ошибка.
-        if new_messages != standart_msg:
-            print_error(f'Ошибка отключения {name}! Сообщения не соответствуют ожидаемым.'
-                        f'Пришло {new_messages}, а ожидалось {standart_msg}.')
-            count_error += 1
-        # Если значение битов status1(7), status2(0), PanelAlm(0) - False, то ошибка.
-        if read_status1_one_bit(7) is True:
-            print_error(f'Ошибка отключения {name}! 7 бит status1={read_status1_one_bit(7)}.')
-            count_error += 1
-        if read_status2_one_bit(bit) is True:
-            print_error(f'Ошибка отключения {name}! {bit} бит status2={read_status2_one_bit(bit)}.')
-            count_error += 1
-        if read_PanelAlm_one_bit(bit) is True:
-            print_error(f'Ошибка отключения {name}! {bit} бит PanelAlm={read_PanelAlm_one_bit(bit)}.')
-            count_error += 1
+            # Читаем сообщения, обнуляем счетчик ошибок.
+            new_messages = read_new_messages(old_message)
+            standart_msg = msg['msg_by_False']
+            count_error = 0
 
-        # Если count_error = 0 то проверка прошла успешно, если 4, то полностью провалилась, если 1-3 то частично.
-        if count_error == 0:
-            print_text_grey(f'Проверка отключения {name} прошла успешно.')
-        elif count_error in (1, 2, 3):
-            print_text_grey(f'Проверка отключения {name} частично провалена. Подробности выше.')
-            not_error = False
-        elif count_error == 4:
-            print_error(f'Проверка отключения {name} провалена.')
-            not_error = False
-        else:
-            print_error(f'Неизвестная ошибка при проверке отключения {name}. '
-                        f'Проверь работу тестов count_error={count_error}.')
+            # Если сообщения не совпадают с ожидаемыми, то ошибка.
+            if new_messages != standart_msg:
+                print_error(f'Ошибка отключения {name}! Сообщения не соответствуют ожидаемым.'
+                            f'Пришло {new_messages}, а ожидалось {standart_msg}.')
+                count_error += 1
+            # Если значение битов status1(7), status2(0), PanelAlm(0) - False, то ошибка.
+            if read_status1_one_bit(7) is True:
+                print_error(f'Ошибка отключения {name}! 7 бит status1={read_status1_one_bit(7)}.')
+                count_error += 1
+            if read_status2_one_bit(bit) is True:
+                print_error(f'Ошибка отключения {name}! {bit} бит status2={read_status2_one_bit(bit)}.')
+                count_error += 1
+            if read_PanelAlm_one_bit(bit) is True:
+                print_error(f'Ошибка отключения {name}! {bit} бит PanelAlm={read_PanelAlm_one_bit(bit)}.')
+                count_error += 1
+
+            # Если count_error = 0 то проверка прошла успешно, если 4, то полностью провалилась, если 1-3 то частично.
+            if count_error == 0:
+                print_text_grey(f'Проверка отключения {name} прошла успешно.')
+            elif count_error in (1, 2, 3):
+                print_text_grey(f'Проверка отключения {name} частично провалена. Подробности выше.')
+                not_error = False
+            elif count_error == 4:
+                print_error(f'Проверка отключения {name} провалена.')
+                not_error = False
+            else:
+                print_error(f'Неизвестная ошибка при проверке отключения {name}. '
+                            f'Проверь работу тестов count_error={count_error}.')
     return not_error
 
 
@@ -645,6 +651,7 @@ def checking_DeltaV(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
+# Проверка работы SpeedLim в во всех режимах работы.
 def checking_SpeedLim(not_error):  # Готово.
     print_title('Проверка работы SpeedLim в разных режимах работы.')
 
@@ -667,18 +674,27 @@ def checking_SpeedLim(not_error):  # Готово.
             thread = threading.Thread(target=change_value, daemon=True, args=(start, stop, step))
             thread.start()
 
-            # Ждем 3 секунды, чтобы статусы успели обновиться  и проверяем 18 бит для status1 и 0-й для PanelSig.
-            sleep(3)
+            # Ждем 3 секунды, чтобы статусы успели обновиться  и проверяем 18 бит для status1, 0-й для PanelSig
+            # и читаем с ножки SPEED_ACT.
+            sleep(2)
             check_st1_and_PanelSig = read_status1_one_bit(STATUS1['SpeedMax']) and read_PanelSig_one_bit(0)
+            SpeedAct = read_discrete_inputs(address=SPEED_ACT_REGISTER, bit=0)
+
+            # Пишем условия проверки в зависимости от режима работы.
+            Oos_passed = mode == 'Oos' and (SpeedAct and check_st1_and_PanelSig) is False
+            Imit_passed = mode == 'Imit' and (SpeedAct and check_st1_and_PanelSig) is False
+            Fld_passed = (mode == 'Fld' and SpeedAct and check_st1_and_PanelSig) is True
+            Tst_passed = mode == 'Tst' and check_st1_and_PanelSig is True and SpeedAct is False
 
             # Если оба бита False, то проверка провалилась, если True, то прошла.
-            if mode == 'Fld' and check_st1_and_PanelSig is False:
+            if (Fld_passed or Tst_passed or Oos_passed or Imit_passed) is True:
+                print_text_grey(f'Проверка пройдена в режиме "{mode}". При изменении значений от {start} до {stop}. '
+                                'SpeedLim работает исправно.')
+            else:
                 not_error = False
                 print_error(f'Проверка провалена в режиме "{mode}". '
                             f'При изменении значений от {start} до {stop}. SpeedLim не работает.')
-            elif (mode == 'Fld' and check_st1_and_PanelSig is True) or check_st1_and_PanelSig is False:
-                print_text_grey(f'Проверка пройдена в режиме "{mode}". При изменении значений от {start} до {stop}. '
-                                'SpeedLim работает исправно.')
+            sleep(3)
     return not_error
 
 
@@ -865,10 +881,10 @@ def checking_working_setpoint_with_large_jump(not_error):  # Делаю.
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_work_at_out_in_range_min_ev_and_max_ev(not_error):  # НУЖНО БУДЕТ ПРОВЕРИТЬ, КАК ИСПРАВЯТ ПО. Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV).
+def checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld(not_error):  # НУЖНО БУДЕТ ПРОВЕРИТЬ, КАК ИСПРАВЯТ ПО. Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV).
     print_title('Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV).')
 
-    # Создаем словарь для проверки. Находим 1% от рабочего диапазона Input.
+    # Создаем словарь для проверки.
     data = {
         'MinEV > 0, MaxEV > 0': {'№': 1, 'MinEV': 11.1,   'MaxEV': 99.9},
         'MinEV = 0, MaxEV > 0': {'№': 2, 'MinEV': 0,      'MaxEV': 888.8},
@@ -876,83 +892,88 @@ def checking_work_at_out_in_range_min_ev_and_max_ev(not_error):  # НУЖНО Б
         'MinEV < 0, MaxEV = 0': {'№': 4, 'MinEV': -999.3, 'MaxEV': 0},
         'MinEV < 0, MaxEV < 0': {'№': 5, 'MinEV': -123.4, 'MaxEV': -32.01}
     }
-    RangeMax_value = START_VALUE['RangeMax']['start_value']
-    RangeMin_value = START_VALUE['RangeMin']['start_value']
-    one_percent_of_input = (RangeMax_value - RangeMin_value) * 0.01
 
-    # Формируем кортеж со значениями для проверки.
-    # (Эталонные сообщения, номер бита для st2 и PanelAlm, значение бита, значение в Input.)
-    print_error('НА ДАННЫЙ МОМЕНТ ЕСТЬ ВОПРОС ПО СООБЩЕНИЮ 200, 202, 250 И 252. ОНИ ОТНОСЯТСЯ К ОБРЫВУ И КЗ.\n'
-                'НУЖНО ЛИБО СДЕЛАТЬ ПЕРЕИМЕНОВАТЬ ЭТИ СООБЩЕНИЯ, '
-                'ЛИБО СДЕЛАТЬНОВЫЕ ИМЕННО НА ВЫХОД ЗА ГРАНИЦЫ Max/MinEV\n\n'
-                '!!!!!!!!!!!! ТЕСТЫ НЕ ПРОХОДЯТ ИЗ-ЗА НЕДОЧЕТА С ">=" В ПО !!!!!!!!!!!!!!!!!!!!\n')
-    status_values_and_values_input_for_check = (
-        ([],              STATUS2['HightErr'], False, RangeMax_value),
-        ([],              STATUS2['HightErr'], False, RangeMax_value + one_percent_of_input - 0.01),
-        ([200, 212],      STATUS2['HightErr'], True,  RangeMax_value + one_percent_of_input),
-        ([],              STATUS2['HightErr'], True,  RangeMax_value + one_percent_of_input + 0.01),
-        ([],              STATUS2['HightErr'], True,  RangeMax_value + one_percent_of_input),
-        ([],              STATUS2['HightErr'], True,  RangeMax_value + one_percent_of_input - 0.01),
-        ([111, 250, 262], STATUS2['HightErr'], False, RangeMax_value),
-        ([],              STATUS2['HightErr'], False, RangeMax_value - 0.01),
-        ([],              STATUS2['LowErr'],   False, RangeMin_value),
-        ([],              STATUS2['LowErr'],   False, RangeMin_value - one_percent_of_input + 0.01),
-        ([202, 212],      STATUS2['LowErr'],   True,  RangeMin_value - one_percent_of_input),
-        ([],              STATUS2['LowErr'],   True,  RangeMin_value - one_percent_of_input - 0.01),
-        ([],              STATUS2['LowErr'],   True,  RangeMin_value - one_percent_of_input),
-        ([],              STATUS2['LowErr'],   True,  RangeMin_value - one_percent_of_input + 0.01),
-        ([111, 252, 262], STATUS2['LowErr'],   False, RangeMin_value),
-        ([],              STATUS2['LowErr'],   False, RangeMin_value + 0.01),
-    )
+    # Включаем режим. Находим 1% от рабочего диапазона Input.
+    for mode in ('Tst', 'Fld'):
+        turn_on_mode(mode=mode)
+        RangeMax_value = START_VALUE['RangeMax']['start_value']
+        RangeMin_value = START_VALUE['RangeMin']['start_value']
+        one_percent_of_input = (RangeMax_value - RangeMin_value) * 0.01
+        print_text_white(f'\nПроверка режима {mode}.')
 
-    # Проходимся в цикле по словарю data. Выставляем значения MinEV и MaxEV.
-    for name_cheking, data_value in data.items():
-        number_check = data_value['№']
-        MinEV_val = data_value['MinEV']
-        MaxEV_val = data_value['MaxEV']
-        write_min_max_EV(MinEV=MinEV_val, MaxEV=MaxEV_val)
-        print_text_white(f'\n{number_check}) Проверка случая {name_cheking} со значениями '
-                         f'MinEV={MinEV_val}, MaxEV={MaxEV_val}')
+        # Формируем кортеж со значениями для проверки.
+        # (Эталонные сообщения, номер бита для st2 и PanelAlm, значение бита, значение в Input.)
+        print_error('НА ДАННЫЙ МОМЕНТ ЕСТЬ ВОПРОС ПО СООБЩЕНИЮ 200, 202, 250 И 252. ОНИ ОТНОСЯТСЯ К ОБРЫВУ И КЗ.\n'
+                    'НУЖНО ЛИБО СДЕЛАТЬ ПЕРЕИМЕНОВАТЬ ЭТИ СООБЩЕНИЯ, '
+                    'ЛИБО СДЕЛАТЬНОВЫЕ ИМЕННО НА ВЫХОД ЗА ГРАНИЦЫ Max/MinEV\n\n'
+                    '!!!!!!!!!!!! ТЕСТЫ НЕ ПРОХОДЯТ ИЗ-ЗА НЕДОЧЕТА С ">=" В ПО !!!!!!!!!!!!!!!!!!!!\n')
+        status_values_and_values_input_for_check = (
+            ([],              STATUS2['HightErr'], False, RangeMax_value),
+            ([],              STATUS2['HightErr'], False, RangeMax_value + one_percent_of_input - 0.01),
+            ([200, 212],      STATUS2['HightErr'], True,  RangeMax_value + one_percent_of_input),
+            ([],              STATUS2['HightErr'], True,  RangeMax_value + one_percent_of_input + 0.01),
+            ([],              STATUS2['HightErr'], True,  RangeMax_value + one_percent_of_input),
+            ([],              STATUS2['HightErr'], True,  RangeMax_value + one_percent_of_input - 0.01),
+            ([111, 250, 262], STATUS2['HightErr'], False, RangeMax_value),
+            ([],              STATUS2['HightErr'], False, RangeMax_value - 0.01),
+            ([],              STATUS2['LowErr'],   False, RangeMin_value),
+            ([],              STATUS2['LowErr'],   False, RangeMin_value - one_percent_of_input + 0.01),
+            ([202, 212],      STATUS2['LowErr'],   True,  RangeMin_value - one_percent_of_input),
+            ([],              STATUS2['LowErr'],   True,  RangeMin_value - one_percent_of_input - 0.01),
+            ([],              STATUS2['LowErr'],   True,  RangeMin_value - one_percent_of_input),
+            ([],              STATUS2['LowErr'],   True,  RangeMin_value - one_percent_of_input + 0.01),
+            ([111, 252, 262], STATUS2['LowErr'],   False, RangeMin_value),
+            ([],              STATUS2['LowErr'],   False, RangeMin_value + 0.01),
+        )
 
-        # Находим рабочий диапазон измерений.
-        # work_range = MaxEV_val - MinEV_val
+        # Проходимся в цикле по словарю data. Выставляем значения MinEV и MaxEV.
+        for name_cheking, data_value in data.items():
+            number_check = data_value['№']
+            MinEV_val = data_value['MinEV']
+            MaxEV_val = data_value['MaxEV']
+            write_min_max_EV(MinEV=MinEV_val, MaxEV=MaxEV_val)
+            print_text_white(f'\n{number_check}) Проверка случая {name_cheking} со значениями '
+                             f'MinEV={MinEV_val}, MaxEV={MaxEV_val}')
 
-        # Читаем сообщения и подcтавляем значения из кортежа values_input_for_check в Input.
-        for msg, number_bit_st2_and_PanelAlm, result, value_in_input in status_values_and_values_input_for_check:
-            old_messages = read_all_messages()
-            write_holding_registers(address=INPUT_REGISTER, values=value_in_input)
-            Out = round(read_float(address=OUT_REGISTER), 2)
+            # Читаем сообщения и подcтавляем значения из кортежа values_input_for_check в Input.
+            for msg, number_bit_st2_and_PanelAlm, result, value_in_input in status_values_and_values_input_for_check:
+                old_messages = read_all_messages()
+                write_holding_registers(address=INPUT_REGISTER, values=value_in_input)
+                Out = round(read_float(address=OUT_REGISTER), 2)
 
-            # Читаем значение 7 бита status1, 4 или 5 бит status2, 4 или 5 бит PanelAlm, PanelState и сообщения.
-            st1 = read_status1_one_bit(number_bit=STATUS1['Bad'])
-            st2 = read_status2_one_bit(number_bit=number_bit_st2_and_PanelAlm)
-            PanelAlm = read_PanelAlm_one_bit(number_bit=number_bit_st2_and_PanelAlm)
-            PanelState = read_PanelState()
-            PanelState_bad = PANELSTATE['Bad']
-            PanelState_res = read_PanelState() == PanelState_bad
-            new_msg = read_new_messages(old_messages)
-            new_msg.sort()
+                # Читаем значение 7 бита status1, 4 или 5 бит status2 и PanelAlm, PanelState, ножку Bad и сообщения.
+                st1 = read_status1_one_bit(number_bit=STATUS1['Bad'])
+                st2 = read_status2_one_bit(number_bit=number_bit_st2_and_PanelAlm)
+                PanelAlm = read_PanelAlm_one_bit(number_bit=number_bit_st2_and_PanelAlm)
+                PanelState = read_PanelState()
+                PanelState_bad = PANELSTATE['Bad']
+                PanelState_res = read_PanelState() == PanelState_bad
+                new_msg = read_new_messages(old_messages)
+                Bad = read_discrete_inputs(address=BAD_REGISTER, bit=0)
+                Bad_result = False if mode == 'Tst' else result
 
-            # Проверяем сработку превышения инженерного значения.
-            if st1 is result and st2 is result and PanelAlm is result and PanelState_res is result and new_msg == msg:
-                print_text_grey(f'   Проверка пройдена при Out={Out} пройдена. Status1, Status2, PanelAlm, '
-                                'PanelState и сообщения сформированы верно.')
-            else:
-                print_error(f'   Проверка провалена при Out={Out}:')
-                not_error = False
-                if st1 is not result:
-                    print_error(f'    - Ошибка в формировании Status1. В 7 бите пришло {st1}, а ожидалось {result}.')
-                if st2 is not result:
-                    print_error(f'    - Ошибка в формировании Status2. В {number_bit_st2_and_PanelAlm} '
-                                f'бите пришло {st2}, а ожидалось {result}.')
-                if PanelAlm is not result:
-                    print_error(f'    - Ошибка в формировании PanelAlm. В {number_bit_st2_and_PanelAlm} '
-                                f'бите пришло {PanelAlm}, а ожидалось {result}.')
-                if PanelState_res is not result:
-                    print_error(f'    - Ошибка в формировании PanelState. Пришло {PanelState}, '
-                                f'а ожидалось {PanelState_bad}.')
-                if new_msg != msg:
-                    print_error(f'    - Ошибка в формировании сообщений. Пришло {new_msg}, а ожидалось {msg}.')
+                # Проверяем сработку превышения инженерного значения.
+                if (st1 and st2 and PanelAlm and PanelState_res) is result and new_msg == msg and Bad is Bad_result:
+                    print_text_grey(f'   Проверка пройдена при Out={Out} пройдена. Status1, Status2, PanelAlm, '
+                                    'PanelState и сообщения сформированы верно.')
+                else:
+                    print_error(f'   Проверка провалена при Out={Out}:')
+                    not_error = False
+                    if Bad is not Bad_result:
+                        print_error(f'    - Ошибка сигнала на ножке Bad. Пришло {Bad}, а ожидалось {Bad_result}.')
+                    if st1 is not result:
+                        print_error(f'    - Ошибка в формировании Status1. В 7 бите {st1}, а ожидалось {result}.')
+                    if st2 is not result:
+                        print_error(f'    - Ошибка в формировании Status2. В {number_bit_st2_and_PanelAlm} '
+                                    f'бите пришло {st2}, а ожидалось {result}.')
+                    if PanelAlm is not result:
+                        print_error(f'    - Ошибка в формировании PanelAlm. В {number_bit_st2_and_PanelAlm} '
+                                    f'бите пришло {PanelAlm}, а ожидалось {result}.')
+                    if PanelState_res is not result:
+                        print_error(f'    - Ошибка в формировании PanelState. Пришло {PanelState}, '
+                                    f'а ожидалось {PanelState_bad}.')
+                    if new_msg != msg:
+                        print_error(f'    - Ошибка в формировании сообщений. Пришло {new_msg}, а ожидалось {msg}.')
     return not_error
 
 
@@ -1182,13 +1203,10 @@ def checking_simulation_mode_when_change_input_and_imitinput(not_error):
 @reset_initial_values
 @writes_func_failed_or_passed
 # Проверка на непрохождении сигнала недостоверности значения АП при выходе Input за пределы MinEV и MaxEV.
-def checking_absence_unreliability_value_min_ev_and_max_ev_in_simulation_mode(not_error):
+def checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos(not_error):
     print_title('Проверка на непрохождении сигнала недостоверности значения АП при выходе за пределы MinEV и MaxEV.')
 
-    # Включаем режим "Имитация".
-    not_error = turn_on_mode(mode='Imit')    
-
-    # Создаем словарь для проверки. Находим 1% от рабочего диапазона Input.
+    # Создаем словарь для проверки.
     data = {
         'MinEV > 0, MaxEV > 0': {'№': 1, 'MinEV': 11.1,   'MaxEV': 99.9},
         'MinEV = 0, MaxEV > 0': {'№': 2, 'MinEV': 0,      'MaxEV': 888.8},
@@ -1196,109 +1214,160 @@ def checking_absence_unreliability_value_min_ev_and_max_ev_in_simulation_mode(no
         'MinEV < 0, MaxEV = 0': {'№': 4, 'MinEV': -999.3, 'MaxEV': 0},
         'MinEV < 0, MaxEV < 0': {'№': 5, 'MinEV': -123.4, 'MaxEV': -32.01}
     }
-    RangeMax_value = START_VALUE['RangeMax']['start_value']
-    RangeMin_value = START_VALUE['RangeMin']['start_value']
 
-    # Формируем кортеж со значениями для проверки.
-    status_values_and_values_input_for_check = (
-        ([], STATUS2['HightErr'], False, RangeMax_value + RangeMax_value),
-        ([], STATUS2['LowErr'],   False, RangeMin_value - RangeMin_value),
-    )
+    # Переключаем режим в цикле и проводим проверку. Задаем значения MinEV и MaxEV.
+    for mode in ('Imit', 'Oos'):
+        not_error = turn_on_mode(mode=mode)
+        RangeMax_value = START_VALUE['RangeMax']['start_value']
+        RangeMin_value = START_VALUE['RangeMin']['start_value']
+        print_text_white(f'\nПроверка режима {mode}.')
 
-    # Проходимся в цикле по data. Выставляем значения MinEV, MaxEV и ImitInput так, чтобы он был внутри диапазона.
-    for name_cheking, data_value in data.items():
-        number_check = data_value['№']
-        MinEV_val = data_value['MinEV']
-        MaxEV_val = data_value['MaxEV']
-        ImitInput = (MinEV_val + MaxEV_val) / 2
-        write_min_max_EV(MinEV=MinEV_val, MaxEV=MaxEV_val)
-        write_holding_registers(address=LEGS['ImitInput']['register'], values=ImitInput)
-        print_text_white(f'\n{number_check}) Проверка случая {name_cheking} со значениями '
-                         f'MinEV={MinEV_val}, MaxEV={MaxEV_val}')
+        # Формируем кортеж со значениями для проверки.
+        status_values_and_values_input_for_check = (
+            ([], STATUS2['HightErr'], False, RangeMax_value + RangeMax_value),
+            ([], STATUS2['LowErr'],   False, RangeMin_value - RangeMin_value),
+        )
 
-        # Читаем сообщения и подcтавляем значения из кортежа values_input_for_check в Input.
-        for msg, number_bit_st2_and_PanelAlm, result, value_in_input in status_values_and_values_input_for_check:
-            old_messages = read_all_messages()
-            write_holding_registers(address=INPUT_REGISTER, values=value_in_input)
-            Out = round(read_float(address=OUT_REGISTER), 2)
+        # Проходимся в цикле по data. Выставляем значения MinEV, MaxEV и ImitInput так, чтобы он был внутри диапазона.
+        for name_cheking, data_value in data.items():
+            number_check = data_value['№']
+            MinEV_val = data_value['MinEV']
+            MaxEV_val = data_value['MaxEV']
+            ImitInput = (MinEV_val + MaxEV_val) / 2
+            write_min_max_EV(MinEV=MinEV_val, MaxEV=MaxEV_val)
+            write_holding_registers(address=LEGS['ImitInput']['register'], values=ImitInput)
+            print_text_white(f'\n{number_check}) Проверка случая {name_cheking} со значениями '
+                             f'MinEV={MinEV_val}, MaxEV={MaxEV_val}')
 
-            # Читаем значение 7 бита status1, 4 или 5 бит status2, 4 или 5 бит PanelAlm, PanelState и сообщения.
-            st1 = read_status1_one_bit(number_bit=STATUS1['Bad'])
-            st2 = read_status2_one_bit(number_bit=number_bit_st2_and_PanelAlm)
-            PanelAlm = read_PanelAlm_one_bit(number_bit=number_bit_st2_and_PanelAlm)
-            PanelState = read_PanelState()
-            PanelState_bad = PANELSTATE['Bad']
-            PanelState_res = read_PanelState() == PanelState_bad
-            new_msg = read_new_messages(old_messages)
+            # Читаем сообщения и подcтавляем значения из кортежа values_input_for_check в Input.
+            for msg, number_bit_st2_and_PanelAlm, result, value_in_input in status_values_and_values_input_for_check:
+                old_messages = read_all_messages()
+                write_holding_registers(address=INPUT_REGISTER, values=value_in_input)
+                Out = round(read_float(address=OUT_REGISTER), 2)
 
-            # Проверяем сработку превышения инженерного значения.
-            if st1 is result and st2 is result and PanelAlm is result and PanelState_res is result and new_msg == msg:
-                print_text_grey(f'   Проверка пройдена при Out={Out} пройдена. Status1, Status2, PanelAlm, '
-                                'PanelState и сообщения сформированы верно.')
-            else:
-                print_error(f'   Проверка провалена при Out={Out}:')
-                not_error = False
-                if st1 is not result:
-                    print_error(f'    - Ошибка в формировании Status1. В 7 бите пришло {st1}, а ожидалось {result}.')
-                if st2 is not result:
-                    print_error(f'    - Ошибка в формировании Status2. В {number_bit_st2_and_PanelAlm} '
-                                f'бите пришло {st2}, а ожидалось {result}.')
-                if PanelAlm is not result:
-                    print_error(f'    - Ошибка в формировании PanelAlm. В {number_bit_st2_and_PanelAlm} '
-                                f'бите пришло {PanelAlm}, а ожидалось {result}.')
-                if PanelState_res is not result:
-                    print_error(f'    - Ошибка в формировании PanelState. Пришло {PanelState}, '
-                                f'а ожидалось {PanelState_bad}.')
-                if new_msg != msg:
-                    print_error(f'    - Ошибка в формировании сообщений. Пришло {new_msg}, а ожидалось {msg}.')
+                # Читаем значение 7 бита status1, 4 или 5 бит status2, 4 или 5 бит PanelAlm, PanelState и сообщения.
+                st1 = read_status1_one_bit(number_bit=STATUS1['Bad'])
+                st2 = read_status2_one_bit(number_bit=number_bit_st2_and_PanelAlm)
+                PanelAlm = read_PanelAlm_one_bit(number_bit=number_bit_st2_and_PanelAlm)
+                PanelState = read_PanelState()
+                PanelState_bad = PANELSTATE['Bad']
+                PanelState_res = read_PanelState() == PanelState_bad
+                new_msg = read_new_messages(old_messages)
+
+                # Проверяем сработку превышения инженерного значения.
+                if (st1 and st2 and PanelAlm and PanelState_res) is result and new_msg == msg:
+                    print_text_grey(f'   Проверка пройдена при Out={Out} пройдена. Status1, Status2, PanelAlm, '
+                                    'PanelState и сообщения сформированы верно.')
+                else:
+                    print_error(f'   Проверка провалена при Out={Out}:')
+                    not_error = False
+                    if st1 is not result:
+                        print_error(f'    - Ошибка в формировании Status1. В 7 бите пришло {st1},'
+                                    f' а ожидалось {result}.')
+                    if st2 is not result:
+                        print_error(f'    - Ошибка в формировании Status2. В {number_bit_st2_and_PanelAlm} '
+                                    f'бите пришло {st2}, а ожидалось {result}.')
+                    if PanelAlm is not result:
+                        print_error(f'    - Ошибка в формировании PanelAlm. В {number_bit_st2_and_PanelAlm} '
+                                    f'бите пришло {PanelAlm}, а ожидалось {result}.')
+                    if PanelState_res is not result:
+                        print_error(f'    - Ошибка в формировании PanelState. Пришло {PanelState}, '
+                                    f'а ожидалось {PanelState_bad}.')
+                    if new_msg != msg:
+                        print_error(f'    - Ошибка в формировании сообщений. Пришло {new_msg}, а ожидалось {msg}.')
     return not_error
 
 
 @reset_initial_values
 @writes_func_failed_or_passed
 # Проверка на непрохождении сигнала недостоверности значения АП при неисправности
-# модуля, канала, датчика и внешней ошибке.
-def checking_errors_channel_module_sensor_and_external_error_in_simulation_mode(not_error):
+# модуля, канала, датчика и внешней ошибке в режимах "Имитация", "Маскирование".
+def checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking(not_error):
     print_title('Проверка на непрохождении сигнала недостоверности значения АП при '
-                'неисправности модуля, канала, датчика и внешней ошибке.')
+                'неисправности модуля, канала, датчика и внешней ошибке. '
+                'в режимах "Имитация", "Маскирование".')
 
-    # Включаем режим "Имитация".
-    not_error = turn_on_mode(mode='Imit')
+    # Проходим циклом по всем режимам работы (кроме режима "Fld"), включаем поочередно и тестируем.
+    for mode in ('Oos', 'Imit'):
+        turn_on_mode(mode=mode)
 
-    # В цикле проходим по всем ошибкам.
-    for error in ['ChFlt', 'ModFlt', 'SensFlt', 'ExtFlt']:
+        # В цикле проходим по всем ошибкам.
+        for error in ['ChFlt', 'ModFlt', 'SensFlt', 'ExtFlt']:
 
-        # Читаем сообщения. Устанавливаем сигнал недостоверности.
-        old_messages = read_all_messages()
-        switch_position_for_legs(command=error, required_bool_value=True)
+            # Читаем сообщения. Устанавливаем сигнал недостоверности.
+            old_messages = read_all_messages()
+            switch_position_for_legs(command=error, required_bool_value=True)
 
-        # Читаем новые сообщения, Status1, Status2, PanelAlm, PanelState и выполняем проверку.
-        number_bit_st2 = STATUS2[error]
-        PanelState_Bad = PANELSTATE['Bad']
-        new_messages = read_new_messages(old_messages)
-        st1 = read_status1_one_bit(number_bit=STATUS1['Bad'])
-        st2 = read_status2_one_bit(number_bit=number_bit_st2)
-        PanelAlm = read_PanelAlm_one_bit(number_bit=number_bit_st2)
-        PanelState = read_PanelState()
+            # Читаем новые сообщения, Status1, Status2, PanelAlm, PanelState и выполняем проверку.
+            number_bit_st2 = STATUS2[error]
+            PanelState_Bad = PANELSTATE['Bad']
+            new_messages = read_new_messages(old_messages)
+            st1 = read_status1_one_bit(number_bit=STATUS1['Bad'])
+            st2 = read_status2_one_bit(number_bit=number_bit_st2)
+            PanelAlm = read_PanelAlm_one_bit(number_bit=number_bit_st2)
+            PanelState = read_PanelState()
 
-        if new_messages == [] and st1 is False and st2 is False and PanelAlm is False and PanelState != PanelState_Bad:
-            print_text_grey(f'Проверка непрохождения сигнала {error}({VALUE_UNRELIABILITY[error]}) прошла успешно.')
-        else:
-            not_error = False
-            print_error(f'Ошибка при проверке непрохождения сигнала {error}({VALUE_UNRELIABILITY[error]}).')
-            if new_messages != []:
-                print_error(f' - Пришли сообщения {new_messages}, хотя не должны были.')
-            if st1 is True:
-                print_error(' - В Status1 7 бит равен True, а должен быть False.')
-            if st2 is True:
-                print_error(f' - В Status2 {number_bit_st2} бит равен True, а должен быть False.')
-            if PanelAlm is True:
-                print_error(f' - В PanelAlm {number_bit_st2} бит равен True, а должен быть False.')
-            if PanelState == PanelState_Bad:
-                print_error(f' - В PanelState пришло {PanelState} , а ожидалось {PanelState_Bad}.')
+            if new_messages == [] and (st1 and st2 and PanelAlm) is False and PanelState != PanelState_Bad:
+                print_text_grey(f'В режиме {mode} проверка непрохождения сигнала '
+                                f'{error}({VALUE_UNRELIABILITY[error]}) прошла успешно.')
+            else:
+                not_error = False
+                print_error(f'В режиме {mode} произошла ошибка при проверке непрохождения сигнала '
+                            f'{error}({VALUE_UNRELIABILITY[error]}).')
+                if new_messages != []:
+                    print_error(f' - Пришли сообщения {new_messages}, хотя не должны были.')
+                if st1 is True:
+                    print_error(' - В Status1 7 бит равен True, а должен быть False.')
+                if st2 is True:
+                    print_error(f' - В Status2 {number_bit_st2} бит равен True, а должен быть False.')
+                if PanelAlm is True:
+                    print_error(f' - В PanelAlm {number_bit_st2} бит равен True, а должен быть False.')
+                if PanelState == PanelState_Bad:
+                    print_error(f' - В PanelState пришло {PanelState} , а ожидалось {PanelState_Bad}.')
 
-        # Снимаем сигнал недостоверности.
-        switch_position_for_legs(command=error, required_bool_value=False)
+            # Снимаем сигнал недостоверности.
+            switch_position_for_legs(command=error, required_bool_value=False)
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+def checking_off_messages_and_statuses_and_kvitir_in_masking_mode(not_error):  # Делаю.
+    print_title('Проверка отсутствия генерации сообщений и статусов, при режиме "Маскирование".')
+
+    # Включаем режим "Маскирование". Читаем сообщения. Устанавливаем сигнал недостоверности.
+    turn_on_mode(mode='Oos')
+    old_messages = read_all_messages()
+    write_holding_registers(address=LEGS['Input']['register'], values=25)
+
+    # Читаем сообщения, статусы и ножку Bad, бит квитирования. Выполняем проверку.
+    new_messages = read_new_messages(old_messages)
+    st1 = read_status1_one_bit(number_bit=STATUS1['Bad'])
+    st1_kvit = read_status1_one_bit(number_bit=STATUS1['Kvitir'])
+    st2 = read_status2_one_bit(number_bit=STATUS2['HightErr'])
+    PanelAlm = read_PanelAlm_one_bit(number_bit=STATUS2['HightErr'])
+    PanelState = read_PanelState() == PANELSTATE['Oos']
+    Bad = read_discrete_inputs(address=BAD_REGISTER, bit=0)
+    if new_messages == [] and PanelState and (st1 and st2 and PanelAlm and Bad and st1_kvit) is False:
+        print_text_grey('Проверка отсутствия генерации сообщений и статусов, при режиме "Маскирование" прошла успешно.')
+    else:
+        not_error = False
+        print_error('При проверке отсутствия генерации сообщений и статусов, при режиме "Маскирование" '
+                    'произошла ошибка.')
+        if new_messages != []:
+            print_error(f' - Пришли сообщения {new_messages}, хотя не должны были.')
+        if st1 is True:
+            print_error(' - В Status1 7 бит равен True, а должен быть False.')
+        if st2 is True:
+            print_error(f' - В Status2 {STATUS2["HightErr"]} бит равен True, а должен быть False.')
+        if PanelAlm is True:
+            print_error(f' - В PanelAlm {STATUS2["HightErr"]} бит равен True, а должен быть False.')
+        if PanelState != PANELSTATE['Oos']:
+            print_error(f' - В PanelState пришло {PanelState} , а ожидалось {PANELSTATE["Oos"]}.')
+        if Bad is True:
+            print_error(f' - В Bad пришло {Bad} , а ожидалось False.')
+        if st1_kvit is True:
+            print_error(' - Квитирование не работает. В Status1 31 бит равен True , а ожидалось False.')
     return not_error
 
 
@@ -1311,21 +1380,7 @@ def checking_(not_error):  # .
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_(not_error):  # .
-    print_title('Проверка.')
-    return not_error
-
-
-@reset_initial_values
-@writes_func_failed_or_passed
-def checking_(not_error):  # .
-    print_title('Проверка.')
-    return not_error
-
-
-@reset_initial_values
-@writes_func_failed_or_passed
-def checking_(not_error):  # .
+def checking_OLOLOLOLOLO(not_error):  # .
     print_title('Проверка.')
     return not_error
 
@@ -1349,41 +1404,45 @@ def main():
         checking_messages_on_off_setpoints()
     '''
 
+    # ОБЩИЕ ПРОВЕРКИ,
+    print('ОБЩИЕ ПРОВЕРКИ\n')
+    checking_errors_writing_registers()
+    cheking_on_off_for_cmdop()
+    checking_generation_messages_and_msg_off()
+    cheking_incorrect_command_cmdop()
+    checking_operating_modes()
+    checking_signal_transfer_low_level_on_middle_level()
+    checking_write_maxEV_and_minEV()
+    checking_not_impossible_min_ev_more_max_ev()
+
     # ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    # checking_errors_writing_registers()
-    # cheking_on_off_for_cmdop()
-    # checking_generation_messages_and_msg_off()
-    # cheking_incorrect_command_cmdop()
-    # cheking_on_off_AlarmOff()
-    # checking_operating_modes()
-    # checking_signal_transfer_low_level_on_middle_level()
-    # checking_write_maxEV_and_minEV()
-    # checking_not_impossible_min_ev_more_max_ev()
-    # checking_errors_channel_module_sensor_and_external_error()
-    # checking_messages_on_off_setpoints()
-    # checking_setpoint_values()
-    # checking_DeltaV()
-    checking_SpeedLim()
-    # checking_setpoint_not_impossible_min_more_max()
-    # checking_work_setpoint()
-    # checking_working_setpoint_with_large_jump()
-    # checking_work_at_out_in_range_min_ev_and_max_ev()
-    # checking_kvitir()
+    cheking_on_off_AlarmOff()
+    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()  # Проверка в "Имитации" и "Полевом режиме"
+    checking_messages_on_off_setpoints()
+    checking_setpoint_values()
+    checking_DeltaV()
+    checking_SpeedLim()  # Проверка работы SpeedLim в во всех режимах работы.
+    checking_setpoint_not_impossible_min_more_max()
+    checking_work_setpoint()
+    checking_working_setpoint_with_large_jump()
+    checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
+    checking_kvitir()
 
     # ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"
-    # checking_simulation_mode_turn_on()
-    # checking_values_when_switching_modes()
-    # checking_input_in_simulation_mode()
-    # checking_simulation_mode_when_change_input_and_imitinput()
-    # checking_absence_unreliability_value_min_ev_and_max_ev_in_simulation_mode()
-    # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode()
-    # добавить тест на несработку СКОРОСТИ ИЗМЕНЕНИЯ АП при изменении Input и ImitInput.
-    # добавить тест на несработку уставок при изменении Input.
-    # Добавить проверку сработки уставок и т.д. в режими имитация при изменении в ImitInput.
+    print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
+    checking_simulation_mode_turn_on()
+    checking_values_when_switching_modes()
+    checking_input_in_simulation_mode()
+    checking_simulation_mode_when_change_input_and_imitinput()
+    checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
+    checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
+    ### добавить тест на несработку уставок при изменении Input.
+    ### Добавить проверку сработки уставок и т.д. в режими имитация при изменении в ImitInput.
     # checking_OLOLOLOLOLO()
 
     # ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"
+    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
     # checking_OLOLOLOLOLO()
 
     # ПРОВЕРКА РЕЖИМА "ТЕСТИРОВАНИЕ"
