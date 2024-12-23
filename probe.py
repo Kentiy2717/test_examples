@@ -38,20 +38,36 @@ from constants_FB_AP import (
     STATUS1
 )
 from assist_function import switch_position, reset_CmdOp, switch_position_for_legs, turn_on_mode
-connect_client()
+# connect_client()
+# 
+# 
+# 
+# close_client()
+from decimal import Decimal
+print(100-(20-(-9999.9))*(100-0)/(20-4))
+print(Decimal(100-(20-(-9999.9))*(100-0)/(20-4)).quantize(Decimal('.0001')))
+print(Decimal('100')-(Decimal('20')-(Decimal('-9999.9')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
 
-# turn_on_mode(mode='Fld')
+print(100-(20-(-100.1))*(100-0)/(20-4))
+print(Decimal(100-(20-(-100.1))*(100-0)/(20-4)).quantize(Decimal('.0001')))
+print(Decimal('100')-(Decimal('20')-(Decimal('-100.1')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
 
-def change_value(start, stop, step):
-    for value in range(start, stop, step):
-        write_holding_registers(address=LEGS['Input']['register'], values=value)
+print(100-(20-(11.95))*(100-0)/(20-4))
+print(Decimal(100-(20-(11.95))*(100-0)/(20-4)).quantize(Decimal('.0001')))
+print(Decimal('100')-(Decimal('20')-(Decimal('11.95')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
 
+print(100-(20-(20.0))*(100-0)/(20-4))
+print(Decimal(100-(20-(20.0))*(100-0)/(20-4)).quantize(Decimal('.0001')))
+print(Decimal('100')-(Decimal('20')-(Decimal('20.0')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
 
-for start, stop, step in ((4, 20, 1), (20, 4, -1)):
-        thread = threading.Thread(target=change_value, daemon=True, args=(start, stop, step))
-        thread.start()
-sleep(3)
-print(read_PanelSig_one_bit(0))
-print(read_status1_one_bit(STATUS1['SpeedMax']))
+print(100-(20-(88.91))*(100-0)/(20-4))
+print(Decimal(100-(20-(88.91))*(100-0)/(20-4)).quantize(Decimal('.0001')))
+print(Decimal('100')-(Decimal('20')-(Decimal('88.91')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
 
-close_client()
+print(100-(20-(555.67))*(100-0)/(20-4))
+print(Decimal(100-(20-(555.67))*(100-0)/(20-4)).quantize(Decimal('.0001')))
+print(Decimal('100')-(Decimal('20')-(Decimal('555.67')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
+
+print(100-(20-(9876.12345))*(100-0)/(20-4))
+print(Decimal(100-(20-(9876.12345))*(100-0)/(20-4)).quantize(Decimal('.0001')))
+print(Decimal('100')-(Decimal('20')-(Decimal('9876.12345')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))

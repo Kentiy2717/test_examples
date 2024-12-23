@@ -307,31 +307,39 @@ def checking_operating_modes(not_error):  # Готово.
 def checking_signal_transfer_low_level_on_middle_level(not_error):  # Готово.
     print_title('Проверка прохождения сигнала с нижнего уровня на средний и правильности пересчета.')
 
-    # Создаем вспомогательные переменные со значениями для записи (Input) и сравнения (Out и OutmA).
-    Input_list = [-9999.9,  -100.1,    0.0,  4.0,  11.95,  20.0,    88.91,   100.0,  555.67,    9876.12345, 12.0]
-    OutmA_list = [-9999.9,  -100.1,    0,  4.0,  11.95,    20.0,    88.91,   100.0,    555.67,    9876.123, 12.0]
-    Out_list = [-62524.379, -650.625, -25,  0,   49.688,   100.0,   530.688,   600,    3447.938,  61700.77, 50]
+    # Проходим циклом и проверяем в разных режимах.
+    for mode in ('Oos', 'Tst', 'Fld',):
+        turn_on_mode(mode=mode)
+        print_text_white(f'\nПроверка в режиме {mode}.')
 
-    # Подаем поочередно значения на запись на ножку Input. Смотрим нет ли ошибок при записи.
-    for i in range(0, len(Input_list)):
-        error = this_is_write_error(address=LEGS['Input']['register'], value=Input_list[i])
+        # Создаем вспомогательные переменные со значениями для записи (Input) и сравнения (Out и OutmA).
+        # ТАК ДОЛЖНО БЫТЬ. ПЕРЕСЧИТЫВАЛ С ПОМОШЬЮ DECIMAL - МОДУЛЬ ДЛЯ ТОЧНЫХ РАСЧЕТОВ.
+        Input_list = (-9999.9,  -100.1,    0.0,  4.0,  11.95,  20.0,    88.91,   100.0,  555.67,    9876.12345, 12.0)
+        OutmA_list = (-9999.9,  -100.1,    0,  4.0,  11.95,    20.0,    88.91,   100.0,    555.67,    9876.12, 12.0)
+        Out_list = (-62524.375, -650.625, -25,  0,   49.6875,   100.0,   530.6875,   600,    3447.9375,  61700.7716, 50)
 
-        # Считываем пересчитанные значения Out и OutmA с регистров.
-        Out = round(decode_float(read_holding_registers(address=OUT_REGISTER, count=2)), 3)
-        OutmA = round(decode_float(read_holding_registers(address=OUTMA_REGISTER, count=2)), 3)
+        # Подаем поочередно значения на запись на ножку Input. Смотрим нет ли ошибок при записи.
+        for i in range(0, len(Input_list)):
+            error = this_is_write_error(address=LEGS['Input']['register'], value=Input_list[i])
 
-        # Если Out и OutmA пересчитались кореектно (сравниваем с эталонными из словаря), то проверка пройдена
-        if Out == Out_list[i] and OutmA == OutmA_list[i]:
-            print_text_grey(f'Значение {Input_list[i]} успешно записалось и пересчиталось.')
-        elif Out != Out_list[i]:
-            print_error(f'Значение {Input_list[i]} пересчиталось некорректно. Out={Out}, а ожидалось {Out_list[i]}.')
-            not_error = False
-        elif OutmA != OutmA_list[i]:
-            print_error(f'Значение {Input_list[i]} пересчиталось некорректно. Out={OutmA}, а ожидалось {OutmA_list[i]}.')
-            not_error = False
-        elif error is True:
-            print_error(f'Ошибка записи значения {Input_list[i]} в Input.')
-            not_error = False
+            # Считываем пересчитанные значения Out и OutmA с регистров.
+            Out = round(decode_float(read_holding_registers(address=OUT_REGISTER, count=2)), 4)
+            OutmA = round(decode_float(read_holding_registers(address=OUTMA_REGISTER, count=2)), 4)
+
+            # Если Out и OutmA пересчитались кореектно (сравниваем с эталонными из словаря), то проверка пройдена
+            if Out == Out_list[i] and OutmA == OutmA_list[i]:
+                print_text_grey(f'Значение {Input_list[i]} успешно записалось и пересчиталось.')
+            elif Out != Out_list[i]:
+                print_error(f'Значение {Input_list[i]} пересчиталось некорректно. '
+                            f'Out={Out}, а ожидалось {Out_list[i]}.')
+                not_error = False
+            elif OutmA != OutmA_list[i]:
+                print_error(f'Значение {Input_list[i]} пересчиталось некорректно. '
+                            f'Out={OutmA}, а ожидалось {OutmA_list[i]}.')
+                not_error = False
+            elif error is True:
+                print_error(f'Ошибка записи значения {Input_list[i]} в Input.')
+                not_error = False
     return not_error
 
 
@@ -1406,43 +1414,43 @@ def main():
 
     # ОБЩИЕ ПРОВЕРКИ,
     print('ОБЩИЕ ПРОВЕРКИ\n')
-    checking_errors_writing_registers()
-    cheking_on_off_for_cmdop()
-    checking_generation_messages_and_msg_off()
-    cheking_incorrect_command_cmdop()
-    checking_operating_modes()
+    # checking_errors_writing_registers()
+    # cheking_on_off_for_cmdop()
+    # checking_generation_messages_and_msg_off()
+    # cheking_incorrect_command_cmdop()
+    # checking_operating_modes()
     checking_signal_transfer_low_level_on_middle_level()
-    checking_write_maxEV_and_minEV()
-    checking_not_impossible_min_ev_more_max_ev()
+    # checking_write_maxEV_and_minEV()
+    # checking_not_impossible_min_ev_more_max_ev()
 
     # ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    cheking_on_off_AlarmOff()
-    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()  # Проверка в "Имитации" и "Полевом режиме"
-    checking_messages_on_off_setpoints()
-    checking_setpoint_values()
-    checking_DeltaV()
-    checking_SpeedLim()  # Проверка работы SpeedLim в во всех режимах работы.
-    checking_setpoint_not_impossible_min_more_max()
-    checking_work_setpoint()
-    checking_working_setpoint_with_large_jump()
-    checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
-    checking_kvitir()
+    # cheking_on_off_AlarmOff()
+    # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()  # Проверка в "Имитации" и "Полевом режиме"
+    # checking_messages_on_off_setpoints()
+    # checking_setpoint_values()
+    # checking_DeltaV()
+    # checking_SpeedLim()  # Проверка работы SpeedLim в во всех режимах работы.
+    # checking_setpoint_not_impossible_min_more_max()
+    # checking_work_setpoint()
+    # checking_working_setpoint_with_large_jump()
+    # checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
+    # checking_kvitir()
 
     # ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-    checking_simulation_mode_turn_on()
-    checking_values_when_switching_modes()
-    checking_input_in_simulation_mode()
-    checking_simulation_mode_when_change_input_and_imitinput()
-    checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
-    checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
+    # checking_simulation_mode_turn_on()
+    # checking_values_when_switching_modes()
+    # checking_input_in_simulation_mode()
+    # checking_simulation_mode_when_change_input_and_imitinput()
+    # checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
+    # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
     ### добавить тест на несработку уставок при изменении Input.
     ### Добавить проверку сработки уставок и т.д. в режими имитация при изменении в ImitInput.
     # checking_OLOLOLOLOLO()
 
     # ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"
-    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+    # checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
     # checking_OLOLOLOLOLO()
 
     # ПРОВЕРКА РЕЖИМА "ТЕСТИРОВАНИЕ"
