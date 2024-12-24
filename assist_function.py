@@ -128,8 +128,8 @@ def compare_out_and_setpoint(
 
 def set_value_AP(
         sign: Literal['>', '<'],
-        setpoint: Literal['AHLim', 'WHLim', 'THLim', 'TLLim', 'WLLim', 'ALLim']
-        ):
+        setpoint: Literal['AHLim', 'WHLim', 'THLim', 'TLLim', 'WLLim', 'ALLim'],
+        mode: Literal['Fld', 'Imit', 'Tst'] = 'Fld'):
     '''
     Устанавливает значение аналогового параматра путем подбора значений передаваемых в Input c шагом 1.
     Записывает и возвращает значение Input. Если нужно значение Input, чтобы при пересчете Out > AHLim,
@@ -137,17 +137,19 @@ def set_value_AP(
     '''
     Lim_val = read_float(address=LEGS[setpoint]['register'])                                                           # Получаем значение уставки.
     Out = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
+    Input_register = LEGS['Input']['register'] if mode != 'Imit' else LEGS['ImitInput']['register']
+    Input = decode_float(read_holding_registers(address=Input_register, count=2))
     if sign == '>':
-        while Lim_val > Out:                                                                                              # Устанавливаем значение Out выше уставки.
-            Input = decode_float(read_holding_registers(address=LEGS['Input']['register'], count=2))                        # Получаем значение в Input.
-            write_holding_registers(address=LEGS['Input']['register'], values=Input+1)                                      # Записываем значение в Input больше на 1.
+        while Lim_val >= Out:
+            Input += 1
+            write_holding_registers(address=Input_register, values=Input)
             Out = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
-    if sign == '<':
-        while Lim_val < Out:                                                                                              # Устанавливаем значение Out выше уставки.
-            Input = decode_float(read_holding_registers(address=LEGS['Input']['register'], count=2))                        # Получаем значение в Input.
-            write_holding_registers(address=LEGS['Input']['register'], values=Input-1)                                      # Записываем значение в Input больше на 1.
+    elif sign == '<':
+        while Lim_val <= Out:
+            Input -= 1
+            write_holding_registers(address=Input_register, values=Input)                                      # Записываем значение в Input больше на 1.
             Out = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
-    Input = decode_float(read_holding_registers(address=LEGS['Input']['register'], count=2))
+    Input = decode_float(read_holding_registers(address=Input_register, count=2))
     return Input
 
 

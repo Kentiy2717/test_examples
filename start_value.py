@@ -888,51 +888,64 @@ def checking_work_setpoint(not_error):  # !!!!!!!!!!! НАДО ПРОВЕРИТ�
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_working_setpoint_with_large_jump(not_error):  # Делаю.
+def checking_working_setpoint_with_large_jump(not_error):
     print_title('Проверка сработки уставок при изменении значения на величину, '
-                'которая затрагивает сразу несколько уставок.')
+                'которая затрагивает сразу несколько уставок в режимах Fld, Imit и Tst.')
 
     # Создаем словарь для проверки.
     data = {
-        'AHLim': {'st1': [True,  False, False, False, False, False], 'bit': 14, 'message': [114]},
-        'WHLim': {'st1': [False, True,  False, False, False, False], 'bit': 13, 'message': [113]},
-        'THLim': {'st1': [False, False, True,  False, False, False], 'bit': 12, 'message': [112]},
-        'TLLim': {'st1': [False, False, False, True,  False, False], 'bit': 10, 'message': [110]},
-        'WLLim': {'st1': [False, False, False, False, True,  False], 'bit':  9, 'message': [109]},
-        'ALLim': {'st1': [False, False, False, False, False,  True], 'bit':  8, 'message': [108]}
+        'AHLim': {'st1': [True,  False, False, False, False, False], 'bit': 14, 'message': [114], 'msg_Imit': [164]},
+        'WHLim': {'st1': [False, True,  False, False, False, False], 'bit': 13, 'message': [113], 'msg_Imit': [163]},
+        'THLim': {'st1': [False, False, True,  False, False, False], 'bit': 12, 'message': [112], 'msg_Imit': [162]},
+        'TLLim': {'st1': [False, False, False, True,  False, False], 'bit': 10, 'message': [110], 'msg_Imit': [160]},
+        'WLLim': {'st1': [False, False, False, False, True,  False], 'bit':  9, 'message': [109], 'msg_Imit': [159]},
+        'ALLim': {'st1': [False, False, False, False, False,  True], 'bit':  8, 'message': [108], 'msg_Imit': [158]}
     }
 
-    # Включаем все уставки. Создаем переменную со знаком для функции set_value_AP. Cоздаем список битов для чтения status1.
+    # Включаем все уставки. Проходим по всем режимам циклом.
     on_or_off_all_setpoint(required_bool_value=True)
-    sign = '>'
-    numbers_bit = [data_value['bit'] for data_value in data.values()]
+    for mode in ('Imit', 'Fld', 'Tst'):
+        print_text_white(f'Проверка уставок в режиме {mode}.')
+        turn_on_mode(mode=mode)
 
-    # Проходим циклом по словарю data и проверяем сработку уставок. Читаем сообщения.
-    for setpoint, data_param in data.items():
-        old_messages = read_all_messages()
+        # Создаем переменную со знаком для функции set_value_AP. Cоздаем список битов для чтения status1.
+        sign = '>'
+        numbers_bit = [data_value['bit'] for data_value in data.values()]
 
-        # Устанавливаем значения в Input больше или меньше, чем значение уставки в зависимости от стадии проверки.
-        sign = '<' if setpoint == 'TLLim' else sign
-        set_value_AP(sign=sign, setpoint=setpoint)
+        # Проходим циклом по словарю data и проверяем сработку уставок.
+        for setpoint, data_param in data.items():
 
-        # Проверяем что в status1 в соответствующих битах, читаем сообщения и сравниваем с эталоном из data.
-        new_messages = read_new_messages(old_messages)
-        st1 = [read_status1_one_bit(number_bit=number_bit) for number_bit in numbers_bit]
-        data_st1 = data_param['st1']
-        data_message = data_param['message']
-        if st1 == data_st1 and new_messages == data_message:
-            print_text_grey(f'Проверка уставки {setpoint} пройдена. Сообщения и status1 сформированы верно.')
-        else:
-            not_error = False
-            if st1 != data_st1:
-                print_error(f'Ошибка! При проверке уставки {setpoint} сформирован неверный status1. '
-                            f'Получен {st1}, а ожидалось {data_st1}.')
-            if new_messages != data_message:
-                print_error(f'Ошибка! При проверке уставки {setpoint} обнаружена ошибка в формировании сообщений. '
-                            f'Сформировано {new_messages} а ожидалось {data_message}.')
+            # Устанавливаем значения в Input больше или меньше, чем значение уставки в зависимости от стадии проверки.
+            sign = '<' if setpoint == 'TLLim' else sign
+            Input = set_value_AP(sign=sign, setpoint=setpoint, mode=mode)
+            midle_Out = (START_VALUE['MaxEV']['start_value'] - START_VALUE['MinEV']['start_value']) / 2
+            midle_Range_input = START_VALUE['RangeMax']['start_value'] / 2 + START_VALUE['RangeMin']['start_value'] / 2
+            start_input = midle_Range_input if mode != 'Imit' else midle_Out
+            input_leg = LEGS['Input']['register'] if mode != 'Imit' else LEGS['ImitInput']['register']
 
-        # Возвращаем значение Input в исходное положение. Прибавляем 1 к счетчику.
-        write_holding_registers(address=LEGS['Input']['register'], values=START_VALUE['Input']['start_value'])
+            # Устанавливаем занчение АП в стартовое. Читаем сообщения, а затем устанавливаем значение в Input.
+            write_holding_registers(address=input_leg, values=start_input)
+            old_messages = read_all_messages()
+            write_holding_registers(address=input_leg, values=Input)
+
+            # Проверяем что в status1 в соответствующих битах, читаем сообщения и сравниваем с эталоном из data.
+            new_messages = read_new_messages(old_messages)
+            st1 = [read_status1_one_bit(number_bit=number_bit) for number_bit in numbers_bit]
+            data_st1 = data_param['st1']
+            data_message = data_param['message'] if mode != 'Imit' else data_param['msg_Imit']
+            if st1 == data_st1 and new_messages == data_message:
+                print_text_grey(f'Проверка уставки {setpoint} пройдена. Сообщения и status1 сформированы верно.')
+            else:
+                not_error = False
+                if st1 != data_st1:
+                    print_error(f'Ошибка! При проверке уставки {setpoint} сформирован неверный status1. '
+                                f'Получен {st1}, а ожидалось {data_st1}.')
+                if new_messages != data_message:
+                    print_error(f'Ошибка! При проверке уставки {setpoint} обнаружена ошибка в формировании сообщений. '
+                                f'Сформировано {new_messages} а ожидалось {data_message}.')
+
+            # Возвращаем значение Input в исходное положение.
+            write_holding_registers(address=input_leg, values=start_input)
     return not_error
 
 
@@ -1471,7 +1484,7 @@ def main():
     # checking_signal_transfer_low_level_on_middle_level()
     # checking_write_maxEV_and_minEV()
     # checking_not_impossible_min_ev_more_max_ev()
-    checking_work_setpoint()
+    # checking_work_setpoint()
 
     # ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
@@ -1482,7 +1495,7 @@ def main():
     # checking_DeltaV()
     # checking_SpeedLim()  # Проверка работы SpeedLim в во всех режимах работы.
     # checking_setpoint_not_impossible_min_more_max()
-    # checking_working_setpoint_with_large_jump()
+    checking_working_setpoint_with_large_jump()
     # checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
     # checking_kvitir()
 
@@ -1494,7 +1507,7 @@ def main():
     # checking_simulation_mode_when_change_input_and_imitinput()
     # checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
     # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    work_setpoint_in_imit_mode_when_write_input(### добавить тест на несработку уставок при изменении Input.
+    # checking_work_setpoint_in_imit_mode_when_write_input()### добавить тест на несработку уставок при изменении Input.
     ### Добавить проверку сработки уставок и т.д. в режими имитация при изменении в ImitInput.
     # checking_OLOLOLOLOLO()
 
