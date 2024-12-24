@@ -44,30 +44,6 @@ from assist_function import switch_position, reset_CmdOp, switch_position_for_le
 # 
 # close_client()
 from decimal import Decimal
-print(100-(20-(-9999.9))*(100-0)/(20-4))
-print(Decimal(100-(20-(-9999.9))*(100-0)/(20-4)).quantize(Decimal('.0001')))
-print(Decimal('100')-(Decimal('20')-(Decimal('-9999.9')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
-
-print(100-(20-(-100.1))*(100-0)/(20-4))
-print(Decimal(100-(20-(-100.1))*(100-0)/(20-4)).quantize(Decimal('.0001')))
-print(Decimal('100')-(Decimal('20')-(Decimal('-100.1')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
-
-print(100-(20-(11.95))*(100-0)/(20-4))
-print(Decimal(100-(20-(11.95))*(100-0)/(20-4)).quantize(Decimal('.0001')))
-print(Decimal('100')-(Decimal('20')-(Decimal('11.95')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
-
-print(100-(20-(20.0))*(100-0)/(20-4))
-print(Decimal(100-(20-(20.0))*(100-0)/(20-4)).quantize(Decimal('.0001')))
-print(Decimal('100')-(Decimal('20')-(Decimal('20.0')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
-
-print(100-(20-(88.91))*(100-0)/(20-4))
-print(Decimal(100-(20-(88.91))*(100-0)/(20-4)).quantize(Decimal('.0001')))
-print(Decimal('100')-(Decimal('20')-(Decimal('88.91')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
-
-print(100-(20-(555.67))*(100-0)/(20-4))
-print(Decimal(100-(20-(555.67))*(100-0)/(20-4)).quantize(Decimal('.0001')))
-print(Decimal('100')-(Decimal('20')-(Decimal('555.67')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
-
-print(100-(20-(9876.12345))*(100-0)/(20-4))
-print(Decimal(100-(20-(9876.12345))*(100-0)/(20-4)).quantize(Decimal('.0001')))
-print(Decimal('100')-(Decimal('20')-(Decimal('9876.12345')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
+print(100-(20-(987.123))*(100-0)/(20-4))
+print(Decimal(100-(20-(987.123))*(100-0)/(20-4)).quantize(Decimal('.0001')))
+print(Decimal('100')-(Decimal('20')-(Decimal('987.123')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))

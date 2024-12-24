@@ -145,3 +145,5 @@ static/
 media/
 
 logs.txt
+.txt
+logs

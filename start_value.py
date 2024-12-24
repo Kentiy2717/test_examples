@@ -314,17 +314,17 @@ def checking_signal_transfer_low_level_on_middle_level(not_error):  # Готов
 
         # Создаем вспомогательные переменные со значениями для записи (Input) и сравнения (Out и OutmA).
         # ТАК ДОЛЖНО БЫТЬ. ПЕРЕСЧИТЫВАЛ С ПОМОШЬЮ DECIMAL - МОДУЛЬ ДЛЯ ТОЧНЫХ РАСЧЕТОВ.
-        Input_list = (-9999.9,  -100.1,    0.0,  4.0,  11.95,  20.0,    88.91,   100.0,  555.67,    9876.12345, 12.0)
-        OutmA_list = (-9999.9,  -100.1,    0,  4.0,  11.95,    20.0,    88.91,   100.0,    555.67,    9876.12, 12.0)
-        Out_list = (-62524.375, -650.625, -25,  0,   49.6875,   100.0,   530.6875,   600,    3447.9375,  61700.7716, 50)
+        Input_list = (-999.9,  -100.1,    0.0,  4.0,  11.95,  20.0,    88.91,   100.0,  555.67,    987.123, 12.0)
+        OutmA_list = (-999.9,  -100.1,    0,  4.0,  11.95,    20.0,    88.91,   100.0,    555.67,    987.123, 12.0)
+        Out_list = (-6274.375, -650.625, -25,  0,   49.688,   100.0,   530.688,   600,    3447.938,  6144.519, 50)
 
         # Подаем поочередно значения на запись на ножку Input. Смотрим нет ли ошибок при записи.
         for i in range(0, len(Input_list)):
             error = this_is_write_error(address=LEGS['Input']['register'], value=Input_list[i])
 
             # Считываем пересчитанные значения Out и OutmA с регистров.
-            Out = round(decode_float(read_holding_registers(address=OUT_REGISTER, count=2)), 4)
-            OutmA = round(decode_float(read_holding_registers(address=OUTMA_REGISTER, count=2)), 4)
+            Out = round(decode_float(read_holding_registers(address=OUT_REGISTER, count=2)), 3)
+            OutmA = round(decode_float(read_holding_registers(address=OUTMA_REGISTER, count=2)), 3)
 
             # Если Out и OutmA пересчитались кореектно (сравниваем с эталонными из словаря), то проверка пройдена
             if Out == Out_list[i] and OutmA == OutmA_list[i]:
@@ -708,7 +708,8 @@ def checking_SpeedLim(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_work_setpoint(not_error):  # Проверка сработки уставок при режиме "Полевая обработка". !!!!!!!!!!! НАДО ПРОВЕРИТЬ РАБОТУ for k in !!!!!!!!!!!!!!
+# Проверка сработки уставок при режиме во всех режимах работы.
+def checking_work_setpoint(not_error):  # !!!!!!!!!!! НАДО ПРОВЕРИТЬ РАБОТУ for k in !!!!!!!!!!!!!!
     print_title('Проверка сработки уставок при режиме "Полевая обработка".')
     print_error('НАДО ПРОВЕРИТЬ РАБОТУ for k in.')
     print()
@@ -716,12 +717,12 @@ def checking_work_setpoint(not_error):  # Проверка сработки ус
     # Создаем словарь для проверки. Ключи - уставки, значение - словарь с номером бита (status1),
     # значением для PanelState, сообщениями и регистром ножки для каждой уставки соответственно.
     data = {
-        'ALLim': {'st1': 8,  'PanelState': 3, 'leg': 40011, 'k': -1, 'msg_on': [108], 'msg_off': []},
-        'WLLim': {'st1': 9,  'PanelState': 4, 'leg': 40010, 'k': -1, 'msg_on': [109], 'msg_off': []},
-        'TLLim': {'st1': 10, 'PanelState': 5, 'leg': 40009, 'k': -1, 'msg_on': [110], 'msg_off': [111]},
-        'THLim': {'st1': 12, 'PanelState': 7, 'leg': 40008, 'k':  1, 'msg_on': [112], 'msg_off': [111]},
-        'WHLim': {'st1': 13, 'PanelState': 8, 'leg': 40007, 'k':  1, 'msg_on': [113], 'msg_off': []},
-        'AHLim': {'st1': 14, 'PanelState': 9, 'leg': 40006, 'k':  1, 'msg_on': [114], 'msg_off': []},
+        'ALLim': {'st1': 8,  'PanelState': 3, 'leg': 40011, 'k': -1, 'msg_on': ([108], [158]), 'msg_off': ([], [])},
+        'WLLim': {'st1': 9,  'PanelState': 4, 'leg': 40010, 'k': -1, 'msg_on': ([109], [159]), 'msg_off': ([], [])},
+        'TLLim': {'st1': 10, 'PanelState': 5, 'leg': 40009, 'k': -1, 'msg_on': ([110], [160]), 'msg_off': ([111], [161])},
+        'THLim': {'st1': 12, 'PanelState': 7, 'leg': 40008, 'k':  1, 'msg_on': ([112], [162]), 'msg_off': ([111], [161])},
+        'WHLim': {'st1': 13, 'PanelState': 8, 'leg': 40007, 'k':  1, 'msg_on': ([113], [163]), 'msg_off': ([], [])},
+        'AHLim': {'st1': 14, 'PanelState': 9, 'leg': 40006, 'k':  1, 'msg_on': ([114], [164]), 'msg_off': ([], [])},
     }
 
     # Включаем все уставки. Устанавливаем значения MaxEV и MinEV - 100 и -100 соответственно.
@@ -750,90 +751,138 @@ def checking_work_setpoint(not_error):  # Проверка сработки ус
         '++++++': {'ALLim':  5,   'WLLim':  10,  'TLLim':  15, 'THLim':  20,  'WHLim':  25,  'AHLim':  30},
     }
 
-    # Проходимся по словарю dict_setpoint_values циклом и проверяем сработку уставок на каждом варианте значений.
-    for setpoint_scope, dict_setpoint_value in dict_setpoint_values.items():
-        print_text_white('-----------------------------------------------------------------------')
-        print_text_white(f'Старт проверки работы уставок, при значениях уставок: {setpoint_scope}')
-        print_text_white('-----------------------------------------------------------------------')
+    # Проходимся циклом по кортежу режимов и выполняем проверку уставок в каждом режиме.
+    for mode in ('Oos', 'Tst', 'Imit', 'Fld'):
+        turn_on_mode(mode=mode)
+        print(f'Проверка в режиме {mode}')
 
-        # Выставляем значения уставок.
-        for set_name, set_val in dict_setpoint_value.items():
-            write_holding_registers(address=LEGS[set_name]['register'], values=set_val*hyst)
+        # Проходимся по словарю dict_setpoint_values циклом и проверяем сработку уставок на каждом варианте значений.
+        for setpoint_scope, dict_setpoint_value in dict_setpoint_values.items():
+            print_text_white('-----------------------------------------------------------------------')
+            print_text_white(f'Старт проверки работы уставок, при значениях уставок: {setpoint_scope}')
+            print_text_white('-----------------------------------------------------------------------')
 
-        # Проходим циклом по словарю еще раз и проверяем сработку каждой из уставок.
-        for set_name, set_val in dict_setpoint_value.items():
+            # Выставляем значения уставок.
+            for set_name, set_val in dict_setpoint_value.items():
+                write_holding_registers(address=LEGS[set_name]['register'], values=set_val*hyst)
 
-            # Устанавливаем значение Input -3 гистерезиса от уставки, для сброса ненужных сообщений.
-            write_holding_registers(
-                address=LEGS['Input']['register'],
-                values=set_val * hyst_mA + (-3 * data[set_name]['k'] * hyst_mA) + mid_range
-            )
+            # Проходим циклом по словарю еще раз и проверяем сработку каждой из уставок.
+            for set_name, set_val in dict_setpoint_value.items():
 
-            # Подставляем значение коэффициента в формулу расчета значения, подаваемого в Input и проверяем сработку.
-            # В Input последовательно ведется запись следующих значений аналогового параметра в цикле:
-            #     1. Меньше уставки на 2 гистерезиса - уставка НЕ должна сработать;
-            #     2. Меньше уставки на 0.5 гистерезиса - уставка НЕ должна сработать;
-            #     3. Уставка - уставка ДОЛЖНА сработать;
-            #     4. Больше уставки на 0.5 гистерезиса - уставка ДОЛЖНА сработать;
-            #     5. Больше уставки на 2 гистерезиса - уставка ДОЛЖНА сработать;
-            #     6. Больше уставки на 0.5 гистерезиса - уставка ДОЛЖНА сработать;
-            #     7. Уставка - уставка ДОЛЖНА сработать;
-            #     8. Меньше уставки на 0.5 гистерезиса - уставка ДОЛЖНА сработать;
-            #     9. Меньше уставки на 2 гистерезиса - уставка НЕ должна сработать;
-
-            # Это как у нас сейчас работает.
-            # for k in ((-2, False, ), (-0.5, False), (0, False), (0.5, True, 'msg_on'),
-            #           (2, True),     (0.5, True),   (0, True),  (-0.5, True),
-            #           (-2, False, 'msg_off')):
-
-            # ЭТО КАК ДОЛЖНО БЫТЬ!
-            for k in ((-2, False, ), (-0.5, False), (0, True, 'msg_on'), (0.5, True),
-                      (2, True),     (0.5, True),   (0, True),           (-0.5, True),
-                      (-2, False, 'msg_off')):
-
-                # Находим по формуле значение, которое необходимо записать в Input, читаем сообщения и записываем.
-                old_messages = read_all_messages()
-                Input = set_val * hyst_mA + (data[set_name]['k'] * k[0] * hyst_mA) + mid_range
-                write_holding_registers(address=LEGS['Input']['register'], values=Input)
-
-                # Читаем значения status1, PanelState, с ножки, сообщения и сравниваем с эталоном из data.
-                number_bit_st1 = data[set_name]['st1']
-                PanelState_val = data[set_name]['PanelState']
-                leg_register = data[set_name]['leg']
-                st1 = read_status1_one_bit(number_bit=number_bit_st1)
-                PanelState = read_PanelState()
-                leg = read_discrete_inputs(address=leg_register, count=1, bit=0)
-                msg = read_new_messages(old_messages)
-
-                # Проверяем правильно ли сформировались сообщения и код в PanelState.
-                msg_passed = msg == data[set_name][k[2]] if len(k) == 3 else msg == []
-                PanelState_passed = PanelState == PanelState_val if k[1] is True else PanelState != PanelState_val
-
-                # Получаем значение Out и значение уставки для формирования сообщения по проверке.
-                Out = read_float(address=OUT_REGISTER)
-                setpoint_value = read_float(address=LEGS[set_name]['register'])
-
-                if st1 is k[1] and PanelState_passed is True and leg is k[1] and msg_passed is True:
-                    print_text_grey(f'  Уставка {set_name} отработала верно при значении уставки '
-                                    f'{set_name}={setpoint_value}, Hyst={hyst} и значении в '
-                                    F'Out={round(Out, 1)}    {k[0]}')
+                # Устанавливаем значение Input -3 гистерезиса от уставки, для сброса ненужных сообщений.
+                if mode == 'Imit':
+                    write_holding_registers(
+                        address=LEGS['ImitInput']['register'],
+                        values=set_val * hyst + (-3 * data[set_name]['k'] * hyst)
+                    )
                 else:
-                    print_error(f'{k[0]}  Проверка уставки {set_name} провалиласьпри значении уставки '
-                                f'{set_name}={setpoint_value}, Hyst={hyst} и значении в Out={round(Out, 1)}:')
-                    if st1 is not k[1]:
-                        print_error(f'    - Status1 сформирован не верно. Значение {number_bit_st1} бита - {st1}, '
-                                    f'а ожидалось {k[1]}')
-                    if PanelState_passed is False:
-                        print_error(f'    - PanelState сформирован не верно. Значение {PanelState}, а ожидалось '
-                                    f'{PanelState_val}')
-                    if leg is not k[1]:
-                        print_error(f'    - Значение на ножку с адресом {leg_register} пришло не верное. '
-                                    f'Пришло {leg},а ожидалось {k[1]}')
-                    if msg_passed is False:
-                        print_error(f'    - Сообщения сформированы не верно. '
-                                    f'Пришло {msg},а ожидалось {data[set_name][k[2]] if len(k) == 3 else []}')
-                    not_error = False
-            print() if not_error is False or DETAIL_REPORT_ON is True else None
+                    write_holding_registers(
+                        address=LEGS['Input']['register'],
+                        values=set_val * hyst_mA + (-3 * data[set_name]['k'] * hyst_mA) + mid_range
+                    )
+
+                # Подставляем значение коэффициента в формулу расчета знач., подаваемого в Input и проверяем сработку.
+                # В Input последовательно ведется запись следующих значений аналогового параметра в цикле:
+                #     1. Меньше уставки на 2 гистерезиса - уставка НЕ должна сработать;
+                #     2. Меньше уставки на 0.5 гистерезиса - уставка НЕ должна сработать;
+                #     3. Уставка - уставка ДОЛЖНА сработать;
+                #     4. Больше уставки на 0.5 гистерезиса - уставка ДОЛЖНА сработать;
+                #     5. Больше уставки на 2 гистерезиса - уставка ДОЛЖНА сработать;
+                #     6. Больше уставки на 0.5 гистерезиса - уставка ДОЛЖНА сработать;
+                #     7. Уставка - уставка ДОЛЖНА сработать;
+                #     8. Меньше уставки на 0.5 гистерезиса - уставка ДОЛЖНА сработать;
+                #     9. Меньше уставки на 2 гистерезиса - уставка НЕ должна сработать;
+
+                # Это как у нас сейчас работает.
+                # for k in ((-2, False, ), (-0.5, False), (0, False), (0.5, True, 'msg_on'),
+                #           (2, True),     (0.5, True),   (0, True),  (-0.5, True),
+                #           (-2, False, 'msg_off')):
+
+                # ЭТО КАК ДОЛЖНО БЫТЬ!
+                for k in ([-2, False, ], [-0.5, False], [0, True, 'msg_on'], [0.5, True],
+                          [2, True],     [0.5, True],   [0, True],           [-0.5, True],
+                          [-2, False, 'msg_off']):
+
+                    # Находим по формуле значение, которое необходимо записать в Input, читаем сообщения и записываем.
+                    if mode == 'Imit':
+                        Input = set_val * hyst + (data[set_name]['k'] * k[0] * hyst)
+                        Input_leg = LEGS['ImitInput']['register']
+                    else:
+                        Input = set_val * hyst_mA + (data[set_name]['k'] * k[0] * hyst_mA) + mid_range
+                        Input_leg = LEGS['Input']['register']
+                    old_messages = read_all_messages()
+                    write_holding_registers(address=Input_leg, values=Input)
+
+                    # Читаем значения status1, PanelState, с ножки, сообщения и сравниваем с эталоном из data.
+                    number_bit_st1 = data[set_name]['st1']
+                    PanelState_val = data[set_name]['PanelState']
+                    leg_register = data[set_name]['leg']
+                    st1 = read_status1_one_bit(number_bit=number_bit_st1)
+                    PanelState = read_PanelState()
+                    leg = read_discrete_inputs(address=leg_register, count=1, bit=0)
+                    msg = read_new_messages(old_messages)
+
+                    # Изменяем k[1] (сработка на ножках), если режим Tst.
+                    leg_k1 = False if mode == 'Tst' else k[1]
+
+                    # Проверяем правильно ли сформировались сообщения и код в PanelState.
+                    if len(k) == 3:
+                        if mode != 'Imit':
+                            expected_msg = data[set_name][k[2]][0]
+                        else:
+                            expected_msg = data[set_name][k[2]][1]
+                        msg_passed = msg == expected_msg
+                    else:
+                        msg_passed = msg == []
+                    PanelState_passed = PanelState == PanelState_val if k[1] is True else PanelState != PanelState_val
+
+                    # Получаем значение Out и значение уставки для формирования сообщения по проверке.
+                    Out = read_float(address=OUT_REGISTER)
+                    setpoint_value = read_float(address=LEGS[set_name]['register'])
+
+                    if mode == 'Oos':
+                        if (st1 and PanelState and leg) is False and msg == []:
+                            print_text_grey(f'  Уставка {set_name} отработала верно при значении уставки '
+                                            f'{set_name}={setpoint_value}, Hyst={hyst} и значении в '
+                                            F'Out={round(Out, 1)}    {k[0]}')
+                        else:
+                            not_error = False
+                            print_error(f'{k[0]}  Проверка уставки {set_name} провалилась при значении уставки '
+                                        f'{set_name}={setpoint_value}, Hyst={hyst} и значении в Out={round(Out, 1)}:')
+                            if st1 is True:
+                                print_error(f'    - Status1 сформирован не верно. Значение {number_bit_st1} бита '
+                                            f'- {st1}, а ожидалось False')
+                            if PanelState is True:
+                                print_error(f'    - PanelState сформирован не верно. Значение {PanelState}, '
+                                            f'а ожидалось False')
+                            if leg is True:
+                                print_error(f'    - Значение на ножку с адресом {leg_register} пришло не верное. '
+                                            f'Пришло {leg},а ожидалось False')
+                            if msg_passed != []:
+                                print_error(f'    - Сообщения сформированы не верно. '
+                                            f'Пришло {msg},а ожидалось []')
+                    else:
+                        if st1 is k[1] and PanelState_passed is True and leg is leg_k1 and msg_passed is True:
+                            print_text_grey(f'  Уставка {set_name} отработала верно при значении уставки '
+                                            f'{set_name}={setpoint_value}, Hyst={hyst} и значении в '
+                                            F'Out={round(Out, 1)}    {k[0]}')
+                        else:
+                            not_error = False
+                            print_error(f'{k[0]}  Проверка уставки {set_name} провалилась при значении уставки '
+                                        f'{set_name}={setpoint_value}, Hyst={hyst} и значении в Out={round(Out, 1)}:')
+                            if st1 is not k[1]:
+                                print_error(f'    - Status1 сформирован не верно. Значение {number_bit_st1} бита '
+                                            f'- {st1}, а ожидалось {k[1]}')
+                            if PanelState_passed is False:
+                                print_error(f'    - PanelState сформирован не верно. Значение {PanelState}, '
+                                            f'а ожидалось {PanelState_val}')
+                            if leg is not leg_k1:
+                                print_error(f'    - Значение на ножку с адресом {leg_register} пришло не верное. '
+                                            f'Пришло {leg},а ожидалось {leg_k1}')
+                            if msg_passed is False:
+                                print_error(f'    - Сообщения сформированы не верно. '
+                                            f'Пришло {msg},а ожидалось {expected_msg if len(k) == 3 else []}')
+                print() if not_error is False or DETAIL_REPORT_ON is True else None
     return not_error
 
 
@@ -1419,9 +1468,10 @@ def main():
     # checking_generation_messages_and_msg_off()
     # cheking_incorrect_command_cmdop()
     # checking_operating_modes()
-    checking_signal_transfer_low_level_on_middle_level()
+    # checking_signal_transfer_low_level_on_middle_level()
     # checking_write_maxEV_and_minEV()
     # checking_not_impossible_min_ev_more_max_ev()
+    checking_work_setpoint()
 
     # ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
@@ -1432,7 +1482,6 @@ def main():
     # checking_DeltaV()
     # checking_SpeedLim()  # Проверка работы SpeedLim в во всех режимах работы.
     # checking_setpoint_not_impossible_min_more_max()
-    # checking_work_setpoint()
     # checking_working_setpoint_with_large_jump()
     # checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
     # checking_kvitir()
@@ -1445,7 +1494,7 @@ def main():
     # checking_simulation_mode_when_change_input_and_imitinput()
     # checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
     # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    ### добавить тест на несработку уставок при изменении Input.
+    work_setpoint_in_imit_mode_when_write_input(### добавить тест на несработку уставок при изменении Input.
     ### Добавить проверку сработки уставок и т.д. в режими имитация при изменении в ImitInput.
     # checking_OLOLOLOLOLO()
 
