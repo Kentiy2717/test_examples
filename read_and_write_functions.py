@@ -1,5 +1,5 @@
 from probably_not_used.constants import SLAVE
-from wrappers import sleep_time_after_operation
+from wrappers_FB_AP import sleep_time_after_operation
 
 from encode_and_decode import encode_float, encode_int, decode_float
 from probably_not_used.TCP_Client import client

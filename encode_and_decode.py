@@ -16,7 +16,6 @@ def decode_float(result_read_registers):  # Рабочая
 
 def encode_int(int):  # Рабочая
     builder = BinaryPayloadBuilder(byteorder=Endian.BIG, wordorder=Endian.LITTLE)
-#     builder.add_16bit_int(int)
     builder.add_16bit_int(int)
     payload = builder.build()
     return payload

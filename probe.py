@@ -8,7 +8,7 @@ from encode_and_decode import (encode_float,
                              decode_int,
                              decoder_bits,
                              )
-from wrappers import reset_initial_values, running_time
+from wrappers_FB_AP import reset_initial_values, running_time
 # sleep(5)
 from read_and_write_functions import (
     read_discrete_inputs,
@@ -37,7 +37,7 @@ from constants_FB_AP import (
     SPEED_ACT_REGISTER,
     STATUS1
 )
-from assist_function import switch_position, reset_CmdOp, switch_position_for_legs, turn_on_mode
+from assist_function_FB_AP import switch_position, reset_CmdOp, switch_position_for_legs, turn_on_mode
 # connect_client()
 # 
 # 

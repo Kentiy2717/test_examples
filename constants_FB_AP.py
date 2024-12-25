@@ -115,17 +115,15 @@ SWITCHES_CMDOP = {
 }
 
 SWITCHES_ST1_PANSIG_MESSAGE = {  # SWITCH
-    # 'SpeedMax':   {'CmdOp': 18, 'St1': 18, 'PSig': 0, },  # 'Messages':хз пока 	 }, # надо тут?   # 'Скорость изменения параметра максимальна',],
-    'SpeedOff':   {'CmdOp': 19, 'st1': 19, 'PSig': 1, },  # 'Messages':хз пока 	 },    # 'Расчёт скорости изменения параметра',],
-    'MsgOff':     {'CmdOp': 20, 'st1': 20, 'PSig': 2, },  # 'Messages':хз пока 	 },      # 'Генерация сообщений отключена',],
-    'FiltOff':    {'CmdOp': 21, 'st1': 21, 'PSig': 3, },  # 'Messages':хз пока 	 },        # 'Фильтр',],
-    'ALLimEn':    {'CmdOp': 22, 'st1': 22, 'PSig': 4, },  # 'Messages':хз пока 	 },       # 'Минимально аварийный порог включен',],
-    'WLLimEn':    {'CmdOp': 23, 'st1': 23, 'PSig': 5, },  # 'Messages':хз пока 	 },       # 'Минимально предельный порог включен',],
-    'TLLimEn':    {'CmdOp': 24, 'st1': 24, 'PSig': 6, },  # 'Messages':хз пока 	 },       # 'Минимально нормативный порог включен',],
-    'THLimEn':    {'CmdOp': 25, 'st1': 25, 'PSig': 7, },  # 'Messages':хз пока 	 },       # 'Максимально нормативный порог включен',],
-    'WHLimEn':    {'CmdOp': 26, 'st1': 26, 'PSig': 8, },  # 'Messages':хз пока 	 },       # 'Максимально предельный порог включен',],
-    'AHLimEn':    {'CmdOp': 27, 'st1': 27, 'PSig': 9, },  # 'Messages':хз пока 	 },       # 'Максимально аварийный порог включен',],
-    # 'Kvitir':     {'CmdOp': 31, 'St1': 31, 'PSig': 10,},  # 'Messages':хз пока    },      # 'Требуется квитирование',],
+    'SpeedOff':   {'CmdOp': 19, 'st1': 19, 'PSig': 1, },  # 'Расчёт скорости изменения параметра',],
+    'MsgOff':     {'CmdOp': 20, 'st1': 20, 'PSig': 2, },  # 'Генерация сообщений отключена',],
+    'FiltOff':    {'CmdOp': 21, 'st1': 21, 'PSig': 3, },  # 'Фильтр',],
+    'ALLimEn':    {'CmdOp': 22, 'st1': 22, 'PSig': 4, },  # 'Минимально аварийный порог включен',],
+    'WLLimEn':    {'CmdOp': 23, 'st1': 23, 'PSig': 5, },  # 'Минимально предельный порог включен',],
+    'TLLimEn':    {'CmdOp': 24, 'st1': 24, 'PSig': 6, },  # 'Минимально нормативный порог включен',],
+    'THLimEn':    {'CmdOp': 25, 'st1': 25, 'PSig': 7, },  # 'Максимально нормативный порог включен',],
+    'WHLimEn':    {'CmdOp': 26, 'st1': 26, 'PSig': 8, },  # 'Максимально предельный порог включен',],
+    'AHLimEn':    {'CmdOp': 27, 'st1': 27, 'PSig': 9, },  # 'Максимально аварийный порог включен',],
 }
 
 # Статус слово 1 (Status1)
@@ -212,63 +210,5 @@ PANELSIG = {
     'THLim':     7,	    # 'Максимально нормативный порог включен'],
     'WHLim':     8,	    # 'Максимально предельный порог включен'],
     'AHLim':     9,	    # 'Максимально аварийный порог включен'],
-    'Kvitir':    10,	# 'Требуется квитирование'],
-}
-
-
-
-
-
-# Значения уставок (нижний уровень)
-LOWER_LIMIT_VALUE_LOW_LEVEL = 0     # нижний предел измерений
-MIN_ALARM_VALUE_LOW_LEVEL = 10      # минимальное аварийное значение
-MIN_PREALARM_VALUE_LOW_LEVEL = 20   # минимальное предельное значение
-MIN_NORMATIVE_VALUE_LOW_LEVEL = 30  # минимальное нормативное значение
-NORMAL_VALUE_LOW_LEVEL = 60         # нормальное значение
-MAX_NORMATIVE_VALUE_LOW_LEVEL = 70  # максимальное нормативное значение
-MAX_PREALARM_VALUE_LOW_LEVEL = 80   # максимальное предельное значение
-MAX_ALARM_VALUE_LOW_LEVEL = 90      # максимальное аварийное значение
-UPPER_LIMIT_VALUE_LOW_LEVEL = 100   # верхний предел измерений
-
-# Значения уставок (средний уровень)
-LOWER_LIMIT_VALUE_MID_LEVEL = 0     # нижний предел измерений
-MIN_ALARM_VALUE_MID_LEVEL = 10      # минимальное аварийное значение
-MIN_PREALARM_VALUE_MID_LEVEL = 20   # минимальное предельное значение
-MIN_NORMATIVE_VALUE_MID_LEVEL = 30  # минимальное нормативное значение
-NORMAL_VALUE_MID_LEVEL = 60         # нормальное значение
-MAX_NORMATIVE_VALUE_MID_LEVEL = 70  # максимальное нормативное значение
-MAX_PREALARM_VALUE_MID_LEVEL = 80   # максимальное предельное значение
-MAX_ALARM_VALUE_MID_LEVEL = 90      # максимальное аварийное значение
-UPPER_LIMIT_VALUE_MID_LEVEL = 100   # верхний предел измерений
-
-# Список списков предельных значений, где 0 элемент это регистр, а 1 элемент - значение для записи
-LIST_LIMIT_VALUE_MID_LEVEL = [
-    [None, LOWER_LIMIT_VALUE_MID_LEVEL],
-    [None, MIN_ALARM_VALUE_MID_LEVEL],
-    [None, MIN_PREALARM_VALUE_MID_LEVEL],
-    [None, MIN_NORMATIVE_VALUE_MID_LEVEL],
-    [None, MAX_NORMATIVE_VALUE_MID_LEVEL],
-    [None, MAX_PREALARM_VALUE_MID_LEVEL],
-    [None, MAX_ALARM_VALUE_MID_LEVEL],
-    [None, UPPER_LIMIT_VALUE_MID_LEVEL],
-]
-
-VALUES_FOR_LOW_LEVEL = [1, 2, 3, 4, 5]
-VALUES_FOR_MID_LEVEL = [40, 45, 50, 55, 60]
-
-# Список регистров для проверки статусов аналогового параметра, начиная с обрыва и заканчивая КЗ.
-REGISTERS_FOR_CHECK_STATUS = [None, None, None, None, None, None, None]
-
-# Словарь для проверки статусов аналогового параметра, начиная с обрыва и заканчивая КЗ.
-# разобрать какая тут информация будет
-STATUS_FOR_CHECK_STATUS = {
-    'Обрыв':                             [None, None, None, None, None, None, None, None, None],
-    'Минимальное аварийное значение':    [None, None, None, None, None, None, None, None, None],
-    'Минимальное предельное значение':   [None, None, None, None, None, None, None, None, None],
-    'Минимальное нормативное значение':  [None, None, None, None, None, None, None, None, None],
-    'Нормальное значение':               [None, None, None, None, None, None, None, None, None],
-    'Максимальное нормативное значение': [None, None, None, None, None, None, None, None, None],
-    'Максимальное предельное значение':  [None, None, None, None, None, None, None, None, None],
-    'Максимальное аварийное значение':   [None, None, None, None, None, None, None, None, None],
-    'КЗ': 0
+    'Kvitir':    10  	# 'Требуется квитирование'],
 }

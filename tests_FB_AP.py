@@ -1,13 +1,12 @@
 from itertools import combinations
 import threading
 from time import sleep
-from assist_function import (
+from assist_function_FB_AP import (
     check_work_kvitir_off,
     check_work_kvitir_on,
     check_write_values_all_setpoints,
     on_or_off_all_setpoint,
     set_value_param,
-    set_value_setpoint,
     switch_position,
     switch_position_for_legs,
     compare_out_and_setpoint,
@@ -20,14 +19,12 @@ from probably_not_used.constants import DETAIL_REPORT_ON
 from constants_FB_AP import (
     BAD_REGISTER,
     INPUT_REGISTER,
-    PANELSIG,
     PANELSTATE,
     REGISTERS_AND_VALUE_WRITE_FOR_BEGIN_TEST as LEGS,
     OUT_REGISTER,
     OUTMA_REGISTER,
     MINEV_REGISTER,
     MAXEV_REGISTER,
-    SETPOINT_VALUE_COMMANDS,
     SPEED_ACT_REGISTER,
     START_VALUE,
     STATUS2,
@@ -44,12 +41,9 @@ from func_print_console_and_write_file import (
     print_text_white,
     print_title,
     print_error,
-    print_passed,
     print_text_grey,
-    print_failed_test
 )
 from read_and_write_functions import (
-    read_coils,
     read_discrete_inputs,
     reset_CmdOp,
     this_is_write_error,
@@ -69,7 +63,7 @@ from read_stutuses_and_message import (
     read_all_messages,
     read_new_messages
 )
-from wrappers import (
+from wrappers_FB_AP import (
     running_time,
     connect_and_close_client,
     start_with_limits_values,
@@ -1625,79 +1619,46 @@ def checking_the_installation_of_commands_from_different_control_panels(not_erro
 @connect_and_close_client
 def main():
     '''
-    Порядок выполнения функций имеет значение и не должен меняться:
-        checking_errors_writing_registers()
-        cheking_on_off_for_cmdop()
-        checking_generation_messages_and_msg_off()
-        cheking_incorrect_command_cmdop()
-        cheking_on_off_AlarmOff()
-        checking_operating_modes()
-        checking_signal_transfer_low_level_on_middle_level()
-        checking_write_maxEV_and_minEV()
-        checking_not_impossible_min_more_max()
-        checking_errors_channel_module_sensor_and_external_error()
-        checking_messages_on_off_setpoints()
+    Главная функция для запуска тестов ФБ АП.
     '''
 
-    # ОБЩИЕ ПРОВЕРКИ,
-    print('ОБЩИЕ ПРОВЕРКИ\n')
-    # checking_errors_writing_registers()
-    # cheking_on_off_for_cmdop()
-    # checking_generation_messages_and_msg_off()
-    # cheking_incorrect_command_cmdop()
-    # checking_operating_modes()
-    # checking_signal_transfer_low_level_on_middle_level()
-    # checking_write_maxEV_and_minEV()
-    # checking_not_impossible_min_ev_more_max_ev()
-    # checking_work_setpoint()
-    # checking_working_setpoint_with_large_jump()
-    # checking_switching_between_modes_in_case_of_errors()
-
-    # ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    # cheking_on_off_AlarmOff()
-    # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()  # Проверка в "Имитации" и "Полевом режиме"
-    # checking_messages_on_off_setpoints()
-    # checking_setpoint_values()
+    cheking_on_off_AlarmOff()
+    checking_messages_on_off_setpoints()
+    checking_setpoint_values()
+    checking_setpoint_not_impossible_min_more_max()
+    checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
+    checking_kvitir()
+    checking_the_installation_of_commands_from_different_control_panels()
+
+    print('ОБЩИЕ ПРОВЕРКИ\n')
+    checking_errors_writing_registers()
+    cheking_on_off_for_cmdop()
+    checking_generation_messages_and_msg_off()
+    cheking_incorrect_command_cmdop()
+    checking_operating_modes()
+    checking_signal_transfer_low_level_on_middle_level()
+    checking_write_maxEV_and_minEV()
+    checking_not_impossible_min_ev_more_max_ev()
+    checking_work_setpoint()
+    checking_working_setpoint_with_large_jump()
+    checking_switching_between_modes_in_case_of_errors()
     checking_DeltaV()
-    # checking_SpeedLim()  # Проверка работы SpeedLim в во всех режимах работы.
-    # checking_setpoint_not_impossible_min_more_max()
-    # checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
-    # checking_kvitir()
+    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
+    checking_SpeedLim()
 
-    # ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-    # checking_simulation_mode_turn_on()
-    # checking_values_when_switching_modes()
-    # checking_input_in_simulation_mode()
-    # checking_simulation_mode_when_change_input_and_imitinput()
-    # checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
-    # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    # checking_work_setpoint_in_imit_mode_when_write_input()
-    ### Добавить проверку сработки уставок и т.д. в режими имитация при изменении в ImitInput.
-    # checking_OLOLOLOLOLO()
+    checking_simulation_mode_turn_on()
+    checking_values_when_switching_modes()
+    checking_input_in_simulation_mode()
+    checking_simulation_mode_when_change_input_and_imitinput()
+    checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
+    checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
+    checking_work_setpoint_in_imit_mode_when_write_input()
 
-    # ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"
-    # checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
-
-    # checking_the_installation_of_commands_from_different_control_panels()
-
-    # ПРОВЕРКА РЕЖИМА "ТЕСТИРОВАНИЕ"
-    # checking_OLOLOLOLOLO()
-
-
+    print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
+    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
 
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-

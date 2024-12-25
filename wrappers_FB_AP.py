@@ -78,7 +78,7 @@ def running_time(func):
 def reset_initial_values(func):
     def wrapper(*args, **kwargs):
         from read_and_write_functions import this_is_write_error
-        from assist_function import switch_position
+        from assist_function_FB_AP import switch_position
         for name, reg_and_val in START_VALUE.items():
             if this_is_write_error(address=reg_and_val['register'], value=reg_and_val['start_value']) is True:
                 print_error(f'Ошибка записи на ножку {name}')

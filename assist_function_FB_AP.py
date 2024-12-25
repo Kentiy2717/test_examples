@@ -1,20 +1,14 @@
-from time import sleep
-from typing import Literal, Dict
-
+from typing import Literal
 
 from constants_FB_AP import (
-    CMDOP,
-    LIST_LIMIT_VALUE_MID_LEVEL,
     OUTMA_REGISTER,
     PANELSIG,
     REGISTERS_AND_VALUE_WRITE_FOR_BEGIN_TEST as LEGS,
     SWITCHES_ST1_PANSIG_MESSAGE as SWITCH,
     STATUS1,
     START_VALUE,
-    REGISTERS_FOR_CHECK_STATUS,
     OUT_REGISTER
 )
-from probably_not_used.constants import SLEEP_TIME_FOR_READ_MESSAGE
 from read_stutuses_and_message import (
     read_PanelSig_one_bit,
     read_all_messages,
@@ -24,7 +18,6 @@ from read_stutuses_and_message import (
 from read_and_write_functions import (
     reset_CmdOp,
     read_float,
-    read_coils,
     write_CmdOp,
     write_holding_register,
     write_holding_registers,
@@ -33,11 +26,8 @@ from read_and_write_functions import (
 )
 from func_print_console_and_write_file import (
     print_text_white,
-    print_title,
     print_error,
-    print_passed,
     print_text_grey,
-    print_failed_test
 )
 from encode_and_decode import decode_float
 
