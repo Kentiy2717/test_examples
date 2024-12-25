@@ -72,4 +72,7 @@ def write_CmdOp(command=0):
     '''Обнуляет CmdOp, а потом записывает значение переданнов в value.'''
 
     reset_CmdOp()
-    write_holding_register(address=LEGS['CmdOp']['register'], value=CMDOP[command])
+    if type(command) is str:
+        write_holding_register(address=LEGS['CmdOp']['register'], value=CMDOP[command])
+    else:
+        write_holding_register(address=LEGS['CmdOp']['register'], value=command)

@@ -1,3 +1,4 @@
+from itertools import combinations
 import threading
 from time import sleep
 from assist_function import (
@@ -52,6 +53,7 @@ from read_and_write_functions import (
     read_discrete_inputs,
     reset_CmdOp,
     this_is_write_error,
+    write_CmdOp,
     write_holding_register,
     write_holding_registers,
     read_holding_registers,
@@ -76,9 +78,10 @@ from wrappers import (
 )
 
 
+@reset_initial_values
 @writes_func_failed_or_passed
 def checking_errors_writing_registers(not_error):  # Готово.
-    print_title('Старт проверки ошибок при записи с отрицательными, положительными и нулевым значениями.')
+    print_title('Проверка ошибок при записи с отрицательными, положительными и нулевым значениями.')
     for name, reg_and_vals in LEGS.items():
         register = reg_and_vals['register']
         for num in range(0, len(reg_and_vals['TEST_VALUES'])):
@@ -95,9 +98,10 @@ def checking_errors_writing_registers(not_error):  # Готово.
     return not_error
 
 
+@reset_initial_values
 @writes_func_failed_or_passed
 def cheking_on_off_for_cmdop(not_error):  # Готово.
-    print_title('Старт проверки работы переключателей (командой на CmdOp).')
+    print_title('Проверка работы переключателей (командой на CmdOp).')
     for name, description in SWITCHES_CMDOP.items():
         count_error = 0                                                                                                 # Максимально возможное количество ошибок.
         for i in range(0, 4):                                                                                           # Пытаемся переключить каждый выключатель 4 раза (чтобы он остался в первоначальном состоянии).
@@ -116,9 +120,10 @@ def cheking_on_off_for_cmdop(not_error):  # Готово.
     return not_error
 
 
+@reset_initial_values
 @writes_func_failed_or_passed
 def checking_generation_messages_and_msg_off(not_error):  # Готово.
-    print_title('Старт проверки включения и отключения режима генерации сообщений (командой на CmdOp).')
+    print_title('Проверка включения и отключения режима генерации сообщений (командой на CmdOp).')
 
     # Убеждаемся, что генерация сообщений и аварийная уставка включены.
     switch_position(command='MsgOff', required_bool_value=False)
@@ -198,7 +203,7 @@ def checking_generation_messages_and_msg_off(not_error):  # Готово.
 @reset_initial_values
 @writes_func_failed_or_passed
 def cheking_incorrect_command_cmdop(not_error):  # Готово.
-    print_title('Старт проверки формирования кода 20001 при записи некорректной команды на CmdOp.')
+    print_title('Проверка формирования кода 20001 при записи некорректной команды на CmdOp.')
     switch_position(command='MsgOff', required_bool_value=False)
     for command in [900, 949, 999]:
         reset_CmdOp()
@@ -214,9 +219,10 @@ def cheking_incorrect_command_cmdop(not_error):  # Готово.
     return not_error
 
 
+@reset_initial_values
 @writes_func_failed_or_passed
 def cheking_on_off_AlarmOff(not_error):  # Готово. Возможно требует доработки проверки на все уставки, а не на одну.
-    print_title('Старт проверки работоспособности AlarmOff.')
+    print_title('Проверка работоспособности AlarmOff.')
 
     # Переключаем AlarmOff=True и включаем верхнюю уставку. Читаем сообщения.
     switch_position_for_legs(command='AlarmOff', required_bool_value=True)
@@ -263,7 +269,7 @@ def cheking_on_off_AlarmOff(not_error):  # Готово. Возможно тре
 @reset_initial_values
 @writes_func_failed_or_passed
 def checking_operating_modes(not_error):  # Готово.
-    print_title('Старт проверки возможности включения режимов командой на CmdOp.')
+    print_title('Проверка возможности включения режимов командой на CmdOp.')
     # Создаем словарь для проверки с наименованиями команд режимов и сообщений при переходе на данные режимы.
     data = {
         'Oos':   {'PanelMode': 1,  'messages': [20100]},
@@ -343,6 +349,7 @@ def checking_signal_transfer_low_level_on_middle_level(not_error):  # Готов
     return not_error
 
 
+@reset_initial_values
 @writes_func_failed_or_passed
 def checking_write_maxEV_and_minEV(not_error):  # Готово.
     print_title('Проверка возможности записи min/max инженерного значения.')
@@ -378,6 +385,7 @@ def checking_write_maxEV_and_minEV(not_error):  # Готово.
     return not_error
 
 
+@reset_initial_values
 @writes_func_failed_or_passed
 def checking_not_impossible_min_ev_more_max_ev(not_error):  # Готово.
     print_title('Проверка невозможности записи minEV > maxEV.')
@@ -516,6 +524,7 @@ def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_err
     return not_error
 
 
+@reset_initial_values
 @writes_func_failed_or_passed
 def checking_messages_on_off_setpoints(not_error):  # Готово.
     print_title('Проверка наличия сообщений при включени и отключении уставок.')
@@ -572,6 +581,7 @@ def checking_messages_on_off_setpoints(not_error):  # Готово.
     return not_error
 
 
+@reset_initial_values
 @writes_func_failed_or_passed
 def checking_setpoint_values(not_error):  # Готово.
     print_title('Проверка правильности записи значения уставок.')
@@ -605,55 +615,62 @@ def checking_setpoint_not_impossible_min_more_max(not_error):
     return not_error
 
 
-@reset_initial_values
 @writes_func_failed_or_passed
 def checking_DeltaV(not_error):  # Готово.
-    print_title('Проверка работы DeltaV.')
+    print_title('Проверка работы DeltaV при изменение Input.')
 
-    # Задаем значение DeltaV равное 1 на нижнем уровне. Запоминаем значение в Out.
-    Out1 = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
-    Input = decode_float(read_holding_registers(address=LEGS['Input']['register'], count=2))
-    write_holding_registers(address=LEGS['Input']['register'], values=(Input + 1))
-    Out = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
-    DeltaV = Out - Out1
-    write_holding_registers(address=LEGS['DeltaV']['register'], values=DeltaV)
+    @reset_initial_values
+    def checking_DeltaV_one_mode(not_error):
+        # Задаем значение DeltaV равное 1 на нижнем уровне. Запоминаем значение в Out.
+        Out1 = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
+        Input = decode_float(read_holding_registers(address=LEGS['Input']['register'], count=2))
+        write_holding_registers(address=LEGS['Input']['register'], values=(Input + 1))
+        Out = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
+        DeltaV = Out - Out1
+        write_holding_registers(address=LEGS['DeltaV']['register'], values=DeltaV)
 
-    # Проверяем правильность записи значения DeltaV.
-    if DeltaV == decode_float(read_holding_registers(address=LEGS['DeltaV']['register'], count=2)):
-        print_text_grey('DeltaV записывается верно.')
-    else:
-        print_error('DeltaV записывается не верно.')
-        not_error = False
-
-    # Подаем значения в пределах DeltaV (Input +-1 на нижнем уровне).
-    for value in [0.5, -0.5, 1, -1, 0]:
-        write_holding_registers(address=LEGS['Input']['register'], values=(Input + value))
-        # Cмотрим, что значение в Out изменилось.
-        if Out != decode_float(read_holding_registers(address=OUT_REGISTER, count=2)) and not_error is False:
-            print_error('DeltaV работает не верно при изменении значения Out меньше чем DeltaV')
+        # Проверяем правильность записи значения DeltaV.
+        if DeltaV == decode_float(read_holding_registers(address=LEGS['DeltaV']['register'], count=2)):
+            print_text_grey('DeltaV записывается верно.')
+        else:
+            print_error('DeltaV записывается не верно.')
             not_error = False
-    print_text_grey('DeltaV работает верно при изменении значения Out меньше чем DeltaV')
 
-    # Подаем значения больше DeltaV(Input +- > 1 на нижнем уровне).
-    for value in [1.001, -1.001]:
-        write_holding_registers(address=LEGS['Input']['register'], values=(Input + value))
+        # Подаем значения в пределах DeltaV (Input +-1 на нижнем уровне).
+        for value in [0.5, -0.5, 1, -1, 0]:
+            write_holding_registers(address=LEGS['Input']['register'], values=(Input + value))
+            # Cмотрим, что значение в Out изменилось.
+            if Out != decode_float(read_holding_registers(address=OUT_REGISTER, count=2)) and not_error is False:
+                print_error('DeltaV работает не верно при изменении значения Out меньше чем DeltaV')
+                not_error = False
+        print_text_grey('DeltaV работает верно при изменении значения Out меньше чем DeltaV')
+
+        # Подаем значения больше DeltaV(Input +- > 1 на нижнем уровне).
+        for value in [1.001, -1.001]:
+            write_holding_registers(address=LEGS['Input']['register'], values=(Input + value))
+            # Cмотрим, что значение в Out изменилось.
+            if Out == decode_float(read_holding_registers(address=OUT_REGISTER, count=2)):
+                print_error('DeltaV работает не верно при изменении значения Out больше чем DeltaV')
+                not_error = False
+        print_text_grey('DeltaV работает верно при изменении значения Out больше чем DeltaV')
+
+        # Подаем значения меньше DeltaV, но перезаписываем Input, чтобы в сумме получить изменение больше чем DeltaV.
+        for value in [0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.001]:
+            write_holding_registers(address=LEGS['Input']['register'], values=(Input + value))
+            Input = decode_float(read_holding_registers(address=LEGS['Input']['register'], count=2))
         # Cмотрим, что значение в Out изменилось.
         if Out == decode_float(read_holding_registers(address=OUT_REGISTER, count=2)):
-            print_error('DeltaV работает не верно при изменении значения Out больше чем DeltaV')
+            print_error('DeltaV работает не верно при многократном изменении значения Out '
+                        'на значение < DeltaV, но в сумме больше чем DeltaV')
             not_error = False
-    print_text_grey('DeltaV работает верно при изменении значения Out больше чем DeltaV')
+        print_text_grey('DeltaV работает верно при многократном изменении значения Out '
+                        'на значение < DeltaV, но в сумме больше чем DeltaV')
+        return not_error
 
-    # Подаем значения меньше DeltaV, но перезаписываем Input, чтобы в сумме получить изменение больше чем DeltaV.
-    for value in [0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.001]:
-        write_holding_registers(address=LEGS['Input']['register'], values=(Input + value))
-        Input = decode_float(read_holding_registers(address=LEGS['Input']['register'], count=2))
-    # Cмотрим, что значение в Out изменилось.
-    if Out == decode_float(read_holding_registers(address=OUT_REGISTER, count=2)):
-        print_error('DeltaV работает не верно при многократном изменении значения Out '
-                    'на значение < DeltaV, но в сумме больше чем DeltaV')
-        not_error = False
-    print_text_grey('DeltaV работает верно при многократном изменении значения Out '
-                    'на значение < DeltaV, но в сумме больше чем DeltaV')
+    for mode in WORK_MODES:
+        turn_on_mode(mode=mode)
+        print_text_white(f'Проверка в режиме {mode}.')
+        not_error = checking_DeltaV_one_mode(not_error)
     return not_error
 
 
@@ -710,7 +727,7 @@ def checking_SpeedLim(not_error):  # Готово.
 @writes_func_failed_or_passed
 # Проверка сработки уставок при режиме во всех режимах работы.
 def checking_work_setpoint(not_error):  # !!!!!!!!!!! НАДО ПРОВЕРИТЬ РАБОТУ for k in !!!!!!!!!!!!!!
-    print_title('Проверка сработки уставок при режиме "Полевая обработка".')
+    print_title('Проверка сработки уставок во всех режимах.')
     print_error('НАДО ПРОВЕРИТЬ РАБОТУ for k in.')
     print()
 
@@ -952,7 +969,8 @@ def checking_working_setpoint_with_large_jump(not_error):
 @reset_initial_values
 @writes_func_failed_or_passed
 def checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld(not_error):  # НУЖНО БУДЕТ ПРОВЕРИТЬ, КАК ИСПРАВЯТ ПО. Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV).
-    print_title('Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV).')
+    print_title('Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV) \n'
+                'в режимах Fld и Tst.')
 
     # Создаем словарь для проверки.
     data = {
@@ -1050,7 +1068,7 @@ def checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld(not_error):  # �
 @reset_initial_values
 @writes_func_failed_or_passed
 def checking_kvitir(not_error):  # ПРОВЕРКА ТОЛЬКО НА УСТАВКЕ 'THLim' ВОЗМОЖНО ТРЕБУЕТСЯ ПРОВЕРИТЬ НА ВСЕХ УСТАВКАХ.
-    print_title('Проверка работоспособности квитирования.')
+    print_title('Проверка работоспособности квитирования. Возникновение при переходе через уставку.')
     print_error('ПРОВЕРКА ТОЛЬКО НА УСТАВКЕ "THLim" ВОЗМОЖНО ТРЕБУЕТСЯ ПРОВЕРИТЬ НА ВСЕХ УСТАВКАХ.')
 
     # Включаем уставку 'THLim'. Квитируем. Проверяем в status1 требуется ли квитирование.
@@ -1274,7 +1292,8 @@ def checking_simulation_mode_when_change_input_and_imitinput(not_error):
 @writes_func_failed_or_passed
 # Проверка на непрохождении сигнала недостоверности значения АП при выходе Input за пределы MinEV и MaxEV.
 def checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos(not_error):
-    print_title('Проверка на непрохождении сигнала недостоверности значения АП при выходе за пределы MinEV и MaxEV.')
+    print_title('Проверка на непрохождении сигнала недостоверности значения АП \n'
+                'при выходе Input за пределы MinEV и MaxEV.')
 
     # Создаем словарь для проверки.
     data = {
@@ -1443,15 +1462,161 @@ def checking_off_messages_and_statuses_and_kvitir_in_masking_mode(not_error):  #
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_(not_error):  # .
-    print_title('Проверка.')
+# Проверка несработки уставок при изменении значения в Input в режиме "Имитация".
+def checking_work_setpoint_in_imit_mode_when_write_input(not_error):
+    print_title('Проверка несработки уставок при изменении значения в Input в режиме "Имитация".')
+
+    # Включаем режим "Имитация". Задаем значение ImitInput.
+    turn_on_mode(mode='Imit')
+    Imit_value = (START_VALUE['MaxEV']['start_value'] - START_VALUE['MinEV']['start_value']) / 2
+    write_holding_registers(address=LEGS['ImitInput']['register'], values=Imit_value)
+
+    # Включаем все уставки. Задаем стартовое значение переменной для Input.
+    on_or_off_all_setpoint(required_bool_value=True)
+    Input_start = START_VALUE['RangeMax']['start_value'] - 1
+
+    # Изменяем значение в Input для вызова сработки разных уставок в цикле.
+    for setpoint in ('AHLim', 'WHLim', 'THLim', 'TLLim', 'WLLim', 'ALLim'):
+
+        # Меняем Input, если отработали все верхние уставки. Читаем сообщения. Меняем значений в Input.
+        Input = START_VALUE['RangeMin']['start_value'] + 1 if setpoint == 'TLLim' else Input_start
+        old_messages = read_all_messages()
+        write_holding_registers(address=LEGS['Input']['register'], values=Input)
+
+        # Читаем сообщения, статусы и ножки. Выполняем проверку. # Возмвращаем Input в исходное состояние.
+        setpointEn = f'{setpoint}En'
+        setpointAct = f'{setpoint[:2]}Act'
+        new_messages = read_new_messages(old_messages)
+        st1 = read_status1_one_bit(number_bit=STATUS1[setpointAct])
+        PanelState = read_PanelState()
+        leg = read_discrete_inputs(address=START_VALUE[setpointEn]['register'])
+        if new_messages == [] and (PanelState and st1 and leg) is False:
+            print_text_grey(f'Проверка несработки уставок при изменении значения в Input, при режиме "Имитация" '
+                            f'прошла успешно для уставки {setpoint}.')
+        else:
+            not_error = False
+            print_error(f'При проверке несработки уставок при изменении значения в Input, при режиме "Имитация" '
+                        f'произошла ошибка для уставки {setpoint}.')
+            if new_messages != []:
+                print_error(f' - Пришли сообщения {new_messages}, хотя не должны были.')
+            if st1 is True:
+                print_error(f' - В Status1 {STATUS1[setpointAct]} бит равен True, а должен быть False.')
+            if PanelState is True:
+                print_error(f' - В PanelState пришло {PanelState} , а ожидалось False.')
+            if leg is True:
+                print_error(f' - Ножка {START_VALUE[setpointEn]["register"]} пришла True, а ожидалось False.')
+        write_holding_registers(address=LEGS['Input']['register'], values=START_VALUE['Input']['start_value'])
     return not_error
 
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_OLOLOLOLOLO(not_error):  # .
-    print_title('Проверка.')
+def checking_switching_between_modes_in_case_of_errors(not_error):
+    print_title('Проверка возможности перехода из режима "Маскирование" в другие режимы при неисправностях \n'
+                'канала, модуля, сенсора,внешней ошибки и выхода за пределы границ измерений.')
+    print_error('НЕПРОХОДИТ ПОТОМУ ЧТО НУЖНЫ ОШИБКИ 201 И 203 (СМОТРИ В ДЕБАГЕ)')
+
+    # Подготавливаем список возможных ошибок.
+    switches = [('ChFlt', [204]), ('ModFlt', [206]), ('SensFlt', [208]),
+                ('ExtFlt', [210]), ('HightErr', [201]), ('LowErr', [203])]
+    work_modes_and_message = (('Imit', [2, 51, 20200]), ('Fld', [4, 51, 20400]), ('Tst', [5, 51, 20500]))
+
+    # Перебираем все возможные комбинации от 1 до 5 одновременных ошибок.
+    for r in range(1, 6):
+        # В цикле перебираем возможные комбинации ошибок.
+        for combo_error in combinations(switches, r):
+            # Пропускаем комбинацию, где одновременно срабатывает выход за верх и низ инженерных величин.
+            if ('HightErr', [200]) in combo_error and ('LowErr', [202]) in combo_error:
+                continue
+
+            # Переходим в режим Oos на старте, выключаем ошибки и приводим Input в рабочий диапазон.
+            not_error = turn_on_mode(mode='Oos')
+            write_holding_registers(address=LEGS['Input']['register'], values=START_VALUE['Input']['start_value'])
+            write_holding_registers(address=LEGS['ImitInput']['register'], values=50)
+            for switch, _ in switches[:4]:
+                switch_position_for_legs(command=switch, required_bool_value=False)
+
+            #  Активируем эти ошибки, пробуем переключать режимы и проверяем меняются ли по st1 и PanelMode.
+            msg_all = []
+            errors = []
+            for error, msg_error in combo_error:
+                errors.append(error)
+                msg_all.extend(msg_error)
+                if error == 'HightErr':
+                    write_holding_registers(address=LEGS['Input']['register'], values=200)
+                    write_holding_registers(address=LEGS['ImitInput']['register'], values=1225)
+                elif error == 'LowErr':
+                    write_holding_registers(address=LEGS['Input']['register'], values=-200)
+                    write_holding_registers(address=LEGS['ImitInput']['register'], values=-1225)
+                else:
+                    switch_position_for_legs(command=error, required_bool_value=True)
+            for mode, msg_mode in work_modes_and_message:
+                msg = msg_mode.copy()
+                if mode == 'Imit' and error == 'LowErr':
+                    msg.extend([202, 212])
+                    st1_kvit_original = True
+                elif mode == 'Imit' and error == 'HightErr':
+                    msg.extend([200, 212])
+                    st1_kvit_original = True
+                elif mode == 'Fld' or mode == 'Tst':
+                    msg.extend(msg_all)
+                    msg.extend([212])
+                    st1_kvit_original = True
+                else:
+                    st1_kvit_original = False
+                msg.sort()
+                old_messages = read_all_messages()
+                not_error = turn_on_mode(mode=mode)
+                new_messages = read_new_messages(old_messages=old_messages)
+                st1 = read_status1_one_bit(number_bit=STATUS1[mode])
+                PanelMode = read_PanelMode()
+                st1_kvit = read_status1_one_bit(number_bit=STATUS1['Kvitir'])
+                if PanelMode == PANELMODE[mode] and st1 is True and st1_kvit is st1_kvit_original and new_messages == msg:
+                    print_text_grey(f'Проверка включения режима {mode} при активных ошибках {errors} пройдена.')
+                else:
+                    not_error = False
+                    print_error(f'Ошибка при проверке включения {mode} при активных ошибках {errors}.')
+                    if st1 is False:
+                        print_error(f'  - в Status1 пришло {st1}, а ожидалось True.')
+                    if PanelMode != PANELMODE[mode]:
+                        print_error(f'  - в PanelMode пришло {PanelMode}, а ожидалось {PANELMODE[mode]}.')
+                    if new_messages != msg:
+                        print_error(f'  - Пришли следующие сообщения - {new_messages}, а ожидалось {msg}.')
+                    if st1_kvit is not st1_kvit_original:
+                        print_error(f'  - в Status1(Квитир.) пришло {st1_kvit}, а ожидалось True.')
+                not_error = turn_on_mode(mode='Oos')
+            print() if DETAIL_REPORT_ON is True else None
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+def checking_the_installation_of_commands_from_different_control_panels(not_error):  # Делаю.
+    print_title('Проверка установки команд с разных панелей управления.')
+
+    msg_original = []
+
+    # Проходим циклом по всем командам на СmdOp.
+    for command_original, command_int_original in CMDOP.items():
+        print_text_white(f'Проверка команды {command_original}.') if DETAIL_REPORT_ON is False else None
+
+        # В цикле выполняем проверку для каждого ПУ.
+        for i in range(8):
+            old_messages = read_all_messages()
+
+            # Формируем команду по формуле. Читаем сообщения. команда с i=0 считается эталонной.
+            command_int_control_panel = command_int_original + (i * 256)
+            write_CmdOp(command=command_int_control_panel)
+            msg = read_new_messages(old_messages)
+            msg_original = msg[-1] if i == 0 else msg_original
+
+            # Смотрим только последнее сообщение.
+            if msg_original + i == msg[-1]:
+                print_text_grey(f'Проверка команды {command_original} на ПУ №{i} прошла успешно.')
+            else:
+                not_error = False
+                print_error(f'Ошибка проверки команды {command_original} на ПУ №{i}. '
+                            f'Пришла команда {msg[-1]}, а ожидалась {msg_original + i}.')
     return not_error
 
 
@@ -1485,6 +1650,8 @@ def main():
     # checking_write_maxEV_and_minEV()
     # checking_not_impossible_min_ev_more_max_ev()
     # checking_work_setpoint()
+    # checking_working_setpoint_with_large_jump()
+    # checking_switching_between_modes_in_case_of_errors()
 
     # ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
@@ -1492,10 +1659,9 @@ def main():
     # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()  # Проверка в "Имитации" и "Полевом режиме"
     # checking_messages_on_off_setpoints()
     # checking_setpoint_values()
-    # checking_DeltaV()
+    checking_DeltaV()
     # checking_SpeedLim()  # Проверка работы SpeedLim в во всех режимах работы.
     # checking_setpoint_not_impossible_min_more_max()
-    checking_working_setpoint_with_large_jump()
     # checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
     # checking_kvitir()
 
@@ -1507,13 +1673,14 @@ def main():
     # checking_simulation_mode_when_change_input_and_imitinput()
     # checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
     # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    # checking_work_setpoint_in_imit_mode_when_write_input()### добавить тест на несработку уставок при изменении Input.
+    # checking_work_setpoint_in_imit_mode_when_write_input()
     ### Добавить проверку сработки уставок и т.д. в режими имитация при изменении в ImitInput.
     # checking_OLOLOLOLOLO()
 
     # ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"
     # checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
-    # checking_OLOLOLOLOLO()
+
+    # checking_the_installation_of_commands_from_different_control_panels()
 
     # ПРОВЕРКА РЕЖИМА "ТЕСТИРОВАНИЕ"
     # checking_OLOLOLOLOLO()
