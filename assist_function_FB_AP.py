@@ -77,7 +77,8 @@ def on_or_off_all_setpoint(required_bool_value=True):
         switch_position(command=command, required_bool_value=required_bool_value)
 
 
-def switch_position(command: str, required_bool_value: bool):
+def switch_position(command: Literal['AHLimEn', 'WHLimEn', 'THLimEn', 'TLLimEn', 'WLLimEn', 'ALLimEn'],
+                    required_bool_value: bool):
     '''!!!! Командой на CmdOp !!!!!'''
     reset_CmdOp()
     if read_status1_one_bit(STATUS1[command]) is not required_bool_value:

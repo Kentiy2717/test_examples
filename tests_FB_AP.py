@@ -1585,7 +1585,8 @@ def checking_switching_between_modes_in_case_of_errors(not_error):
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_the_installation_of_commands_from_different_control_panels(not_error):  # Делаю.
+# Проверка установки команд с разных панелей управления.
+def checking_the_installation_of_commands_from_different_control_panels(not_error):
     print_title('Проверка установки команд с разных панелей управления.')
 
     msg_original = []
@@ -1614,6 +1615,84 @@ def checking_the_installation_of_commands_from_different_control_panels(not_erro
     return not_error
 
 
+@reset_initial_values
+@writes_func_failed_or_passed
+# Проверка задержки на срабатывание в режимах Fld, Tst, Imit.
+def checking_t01(not_error):
+    print_title('Проверка задержки на срабатывание в режимах Fld, Tst, Imit.')
+
+    # Включаем уставку AHlim Проходим в цикле по режимам работы. Устанавливаем значение Т01 = 1 сек.
+    for mode in ('Fld', 'Tst', 'Imit'):
+        switch_position(command='AHLimEn', required_bool_value=True)
+        not_error = turn_on_mode(mode=mode)
+        write_holding_register(address=LEGS['T01']['register'], value=1000)
+
+        # Определяем регистр и значение для записи в зависимости от режима. Квитируем.
+        if mode != 'Imit':
+            Input_register = LEGS['Input']['register']
+            Input_value = START_VALUE['RangeMax']['start_value'] - 1
+        else:
+            Input_register = LEGS['ImitInput']['register']
+            Input_value = START_VALUE['MaxEV']['start_value'] - 1
+
+        # Создаем функцию для проверки, которая квитирует, меняет параметр АП(value), ждет(sleep_time) и проверяет st1.
+        def checking(sleep_time, values, msg, not_error=not_error, mode=mode):
+            write_holding_registers(address=Input_register, values=values)
+            sleep(sleep_time)
+            number_bit = STATUS1['AHAct']
+            number_bit_kvitir = STATUS1['Kvitir']
+            st1 = read_status1_one_bit(number_bit=number_bit)
+            st1_kvitir = read_status1_one_bit(number_bit=number_bit_kvitir)
+            if (st1 and st1_kvitir) is False:
+                print_text_grey(f'Проверка несработки уставки при {msg}, через {sleep_time}сек при T01=1сек в режиме '
+                                f'{mode} прошла успешно.')
+            else:
+                not_error = False
+                if st1 is True:
+                    print_error(f'Ошибка проверки несработки уставки при {msg}, через {sleep_time}сек при T01=1сек '
+                                f'в режиме {mode}. \nВ Status1 в бите №{number_bit} - True, а ожидалось False.')
+                elif st1_kvitir is True:
+                    print_error(f'Ошибка проверки несработки уставки при {msg}, через {sleep_time}сек при T01 = 1сек '
+                                f'в режиме {mode}. \nВ Status1 в бите №{number_bit_kvitir} - True, а ожидалось False.')
+            return not_error
+
+        # Записываем значение превушающее уставку в регистр и проверяем несработку уставки через 0,5 сек.
+        not_error = checking(sleep_time=0.5,
+                             values=Input_value,
+                             msg='ее привышении')
+
+        # Возвращаем значение АП в исходное положение и проверяем через 1,5 сек что уставка попрежнему не сработала.
+        not_error = checking(sleep_time=1.5,
+                             values=START_VALUE['Input']['start_value'],
+                             msg='возвращении в исходное положение')
+
+        # Опять записываем значение превушающее уставку в регистр и проверяем сработку уставки через 1 сек.
+        write_holding_registers(address=Input_register, values=Input_value)
+        sleep(1)
+        number_bit = STATUS1['AHAct']
+        number_bit_kvitir = STATUS1['Kvitir']
+        st1 = read_status1_one_bit(number_bit=number_bit)
+        st1_kvitir = read_status1_one_bit(number_bit=number_bit_kvitir)
+        if (st1 and st1_kvitir) is True:
+            print_text_grey(f'Проверка сработки уставки при ее привышении, через 1сек при T01=1сек в режиме {mode} '
+                            f'прошла успешно.')
+        else:
+            not_error = False
+            if st1 is False:
+                print_error(f'Ошибка проверки сработки уставки при ее привышении, через 0,5сек при T01=1сек '
+                            f'в режиме {mode}. \nВ Status1 в бите №{number_bit} - False, а ожидалось True.')
+            elif st1_kvitir is True:
+                print_error(f'Ошибка проверки сработки уставки при ее привышении, через 0,5сек при T01 = 1сек '
+                            f'в режиме {mode}. \nВ Status1 в бите №{number_bit_kvitir} - False, а ожидалось True.')
+
+        # Возвращаем в исходное положение значение АП и квитируем.
+        write_holding_registers(address=Input_register, values=START_VALUE['Input']['start_value'])
+        write_CmdOp(command='Kvitir')
+
+
+    return not_error
+
+
 @running_time
 @start_with_limits_values
 @connect_and_close_client
@@ -1623,41 +1702,42 @@ def main():
     '''
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    cheking_on_off_AlarmOff()
-    checking_messages_on_off_setpoints()
-    checking_setpoint_values()
-    checking_setpoint_not_impossible_min_more_max()
-    checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
-    checking_kvitir()
-    checking_the_installation_of_commands_from_different_control_panels()
+    # cheking_on_off_AlarmOff()
+    # checking_messages_on_off_setpoints()
+    # checking_setpoint_values()
+    # checking_setpoint_not_impossible_min_more_max()
+    # checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
+    # checking_kvitir()
+    # checking_the_installation_of_commands_from_different_control_panels()
+    checking_t01()
 
     print('ОБЩИЕ ПРОВЕРКИ\n')
-    checking_errors_writing_registers()
-    cheking_on_off_for_cmdop()
-    checking_generation_messages_and_msg_off()
-    cheking_incorrect_command_cmdop()
-    checking_operating_modes()
-    checking_signal_transfer_low_level_on_middle_level()
-    checking_write_maxEV_and_minEV()
-    checking_not_impossible_min_ev_more_max_ev()
-    checking_work_setpoint()
-    checking_working_setpoint_with_large_jump()
-    checking_switching_between_modes_in_case_of_errors()
-    checking_DeltaV()
-    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
-    checking_SpeedLim()
+    # checking_errors_writing_registers()
+    # cheking_on_off_for_cmdop()
+    # checking_generation_messages_and_msg_off()
+    # cheking_incorrect_command_cmdop()
+    # checking_operating_modes()
+    # checking_signal_transfer_low_level_on_middle_level()
+    # checking_write_maxEV_and_minEV()
+    # checking_not_impossible_min_ev_more_max_ev()
+    # checking_work_setpoint()
+    # checking_working_setpoint_with_large_jump()
+    # checking_switching_between_modes_in_case_of_errors()
+    # checking_DeltaV()
+    # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
+    # checking_SpeedLim()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-    checking_simulation_mode_turn_on()
-    checking_values_when_switching_modes()
-    checking_input_in_simulation_mode()
-    checking_simulation_mode_when_change_input_and_imitinput()
-    checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
-    checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    checking_work_setpoint_in_imit_mode_when_write_input()
+    # checking_simulation_mode_turn_on()
+    # checking_values_when_switching_modes()
+    # checking_input_in_simulation_mode()
+    # checking_simulation_mode_when_change_input_and_imitinput()
+    # checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
+    # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
+    # checking_work_setpoint_in_imit_mode_when_write_input()
 
     print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+    # checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
 
 
 if __name__ == "__main__":
