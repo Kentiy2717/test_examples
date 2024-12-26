@@ -8,10 +8,11 @@ from encode_and_decode import (encode_float,
                              decode_int,
                              decoder_bits,
                              )
-from wrappers_FB_AP import reset_initial_values, running_time
+from wrappers_FB_AP import reset_initial_values
 # sleep(5)
-from read_and_write_functions import (
+from common_read_and_write_functions import (
     read_discrete_inputs,
+    read_int,
     write_holding_registers,
     write_holding_register,
     read_holding_registers,
@@ -20,7 +21,7 @@ from read_and_write_functions import (
     write_coil,
     read_float
 )
-from read_stutuses_and_message import (
+from read_stutuses_and_message_FB_AP import (
     read_PanelSig_one_bit,
     read_status1_one_bit,
     read_all_messages,
@@ -38,12 +39,8 @@ from constants_FB_AP import (
     STATUS1
 )
 from assist_function_FB_AP import switch_position, reset_CmdOp, switch_position_for_legs, turn_on_mode
-# connect_client()
-# 
-# 
-# 
-# close_client()
-from decimal import Decimal
-print(100-(20-(987.123))*(100-0)/(20-4))
-print(Decimal(100-(20-(987.123))*(100-0)/(20-4)).quantize(Decimal('.0001')))
-print(Decimal('100')-(Decimal('20')-(Decimal('987.123')))*(Decimal('100')-Decimal('0'))/(Decimal('20')-Decimal('4')))
+connect_client()
+
+print(read_int(address=LEGS['T01']['register']))
+
+close_client()

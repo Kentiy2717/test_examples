@@ -43,33 +43,31 @@ from func_print_console_and_write_file import (
     print_error,
     print_text_grey,
 )
-from read_and_write_functions import (
+from common_read_and_write_functions import (
     read_discrete_inputs,
-    reset_CmdOp,
     this_is_write_error,
-    write_CmdOp,
     write_holding_register,
     write_holding_registers,
     read_holding_registers,
-    read_float
+    read_float,
+    write_holding_registers_int
 )
-from read_stutuses_and_message import (
+from read_messages import read_all_messages, read_new_messages
+from read_and_write_functions_FB_AP import reset_CmdOp, write_CmdOp
+from read_stutuses_and_message_FB_AP import (
     read_PanelAlm_one_bit,
     read_status1_one_bit,
     read_status2_one_bit,
     read_PanelSig_one_bit,
     read_PanelMode,
     read_PanelState,
-    read_all_messages,
-    read_new_messages
 )
-from wrappers_FB_AP import (
+from common_wrappers import (
     running_time,
     connect_and_close_client,
-    start_with_limits_values,
-    writes_func_failed_or_passed,
-    reset_initial_values
+    writes_func_failed_or_passed
 )
+from wrappers_FB_AP import start_with_limits_values, reset_initial_values
 
 
 @reset_initial_values
@@ -215,7 +213,7 @@ def cheking_incorrect_command_cmdop(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def cheking_on_off_AlarmOff(not_error):  # Готово. Возможно требует доработки проверки на все уставки, а не на одну.
+def cheсking_on_off_AlarmOff(not_error):  # Готово. Возможно требует доработки проверки на все уставки, а не на одну.
     print_title('Проверка работоспособности AlarmOff.')
 
     # Переключаем AlarmOff=True и включаем верхнюю уставку. Читаем сообщения.
@@ -1625,15 +1623,18 @@ def checking_t01(not_error):
     for mode in ('Fld', 'Tst', 'Imit'):
         switch_position(command='AHLimEn', required_bool_value=True)
         not_error = turn_on_mode(mode=mode)
-        write_holding_register(address=LEGS['T01']['register'], value=1000)
+        print_text_white(f'Проверка в режиме {mode}.')
+        write_holding_registers_int(address=LEGS['T01']['register'], values=1000)
 
         # Определяем регистр и значение для записи в зависимости от режима. Квитируем.
         if mode != 'Imit':
             Input_register = LEGS['Input']['register']
             Input_value = START_VALUE['RangeMax']['start_value'] - 1
+            Input_value_start = START_VALUE['Input']['start_value']
         else:
             Input_register = LEGS['ImitInput']['register']
             Input_value = START_VALUE['MaxEV']['start_value'] - 1
+            Input_value_start = read_float(address=LEGS['ImitInput']['register'])
 
         # Создаем функцию для проверки, которая квитирует, меняет параметр АП(value), ждет(sleep_time) и проверяет st1.
         def checking(sleep_time, values, msg, not_error=not_error, mode=mode):
@@ -1644,16 +1645,16 @@ def checking_t01(not_error):
             st1 = read_status1_one_bit(number_bit=number_bit)
             st1_kvitir = read_status1_one_bit(number_bit=number_bit_kvitir)
             if (st1 and st1_kvitir) is False:
-                print_text_grey(f'Проверка несработки уставки при {msg}, через {sleep_time}сек при T01=1сек в режиме '
-                                f'{mode} прошла успешно.')
+                print_text_grey(f'Проверка несработки уставки при {msg}, через {sleep_time}сек при T01=1сек '
+                                'прошла успешно.')
             else:
                 not_error = False
                 if st1 is True:
-                    print_error(f'Ошибка проверки несработки уставки при {msg}, через {sleep_time}сек при T01=1сек '
-                                f'в режиме {mode}. \nВ Status1 в бите №{number_bit} - True, а ожидалось False.')
+                    print_error(f'Ошибка проверки несработки уставки при {msg}, через {sleep_time}сек при T01=1сек.\n'
+                                f'В Status1 в бите №{number_bit} - True, а ожидалось False.')
                 elif st1_kvitir is True:
-                    print_error(f'Ошибка проверки несработки уставки при {msg}, через {sleep_time}сек при T01 = 1сек '
-                                f'в режиме {mode}. \nВ Status1 в бите №{number_bit_kvitir} - True, а ожидалось False.')
+                    print_error(f'Ошибка проверки несработки уставки при {msg}, через {sleep_time}сек '
+                                f'при T01 = 1сек.\nВ Status1 в бите №{number_bit_kvitir} - True, а ожидалось False.')
             return not_error
 
         # Записываем значение превушающее уставку в регистр и проверяем несработку уставки через 0,5 сек.
@@ -1663,7 +1664,7 @@ def checking_t01(not_error):
 
         # Возвращаем значение АП в исходное положение и проверяем через 1,5 сек что уставка попрежнему не сработала.
         not_error = checking(sleep_time=1.5,
-                             values=START_VALUE['Input']['start_value'],
+                             values=Input_value_start,
                              msg='возвращении в исходное положение')
 
         # Опять записываем значение превушающее уставку в регистр и проверяем сработку уставки через 1 сек.
@@ -1674,22 +1675,20 @@ def checking_t01(not_error):
         st1 = read_status1_one_bit(number_bit=number_bit)
         st1_kvitir = read_status1_one_bit(number_bit=number_bit_kvitir)
         if (st1 and st1_kvitir) is True:
-            print_text_grey(f'Проверка сработки уставки при ее привышении, через 1сек при T01=1сек в режиме {mode} '
-                            f'прошла успешно.')
+            print_text_grey('Проверка сработки уставки при ее привышении, через 1сек при T01=1сек '
+                            'прошла успешно.')
         else:
             not_error = False
             if st1 is False:
-                print_error(f'Ошибка проверки сработки уставки при ее привышении, через 0,5сек при T01=1сек '
-                            f'в режиме {mode}. \nВ Status1 в бите №{number_bit} - False, а ожидалось True.')
+                print_error(f'Ошибка проверки сработки уставки при ее привышении, через 0,5сек при T01=1сек.\n'
+                            f'В Status1 в бите №{number_bit} - False, а ожидалось True.')
             elif st1_kvitir is True:
-                print_error(f'Ошибка проверки сработки уставки при ее привышении, через 0,5сек при T01 = 1сек '
-                            f'в режиме {mode}. \nВ Status1 в бите №{number_bit_kvitir} - False, а ожидалось True.')
+                print_error(f'Ошибка проверки сработки уставки при ее привышении, через 0,5сек при T01 = 1сек.\n'
+                            f'В Status1 в бите №{number_bit_kvitir} - False, а ожидалось True.')
 
         # Возвращаем в исходное положение значение АП и квитируем.
         write_holding_registers(address=Input_register, values=START_VALUE['Input']['start_value'])
         write_CmdOp(command='Kvitir')
-
-
     return not_error
 
 
@@ -1702,14 +1701,13 @@ def main():
     '''
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    # cheking_on_off_AlarmOff()
-    # checking_messages_on_off_setpoints()
-    # checking_setpoint_values()
-    # checking_setpoint_not_impossible_min_more_max()
-    # checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
-    # checking_kvitir()
-    # checking_the_installation_of_commands_from_different_control_panels()
-    checking_t01()
+    cheсking_on_off_AlarmOff()
+    checking_messages_on_off_setpoints()
+    checking_setpoint_values()
+    checking_setpoint_not_impossible_min_more_max()
+    checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
+    checking_kvitir()
+    checking_the_installation_of_commands_from_different_control_panels()
 
     print('ОБЩИЕ ПРОВЕРКИ\n')
     # checking_errors_writing_registers()
@@ -1726,6 +1724,7 @@ def main():
     # checking_DeltaV()
     # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
     # checking_SpeedLim()
+    checking_t01()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
     # checking_simulation_mode_turn_on()

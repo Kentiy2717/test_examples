@@ -9,16 +9,14 @@ from constants_FB_AP import (
     START_VALUE,
     OUT_REGISTER
 )
-from read_stutuses_and_message import (
+from read_and_write_functions_FB_AP import reset_CmdOp, write_CmdOp
+from read_messages import read_all_messages, read_new_messages
+from read_stutuses_and_message_FB_AP import (
     read_PanelSig_one_bit,
-    read_all_messages,
-    read_new_messages,
     read_status1_one_bit,
 )
-from read_and_write_functions import (
-    reset_CmdOp,
+from common_read_and_write_functions import (
     read_float,
-    write_CmdOp,
     write_holding_register,
     write_holding_registers,
     read_holding_registers,
@@ -75,6 +73,16 @@ def on_or_off_all_setpoint(required_bool_value=True):
     '''Выставляем значение всех уставок в положение required_bool_value через CmdOp'''
     for command in ['ALLimEn', 'WLLimEn', 'TLLimEn', 'THLimEn', 'WHLimEn', 'AHLimEn']:
         switch_position(command=command, required_bool_value=required_bool_value)
+
+
+# def switch_position(command: Literal['AHLimEn', 'WHLimEn', 'THLimEn', 'TLLimEn', 'WLLimEn', 'ALLimEn'],
+#                     required_bool_value: bool):
+#     '''!!!! Командой на CmdOp !!!!!'''
+#     reset_CmdOp()
+#     if read_status1_one_bit(STATUS1[command]) is not required_bool_value:
+#         write_holding_register(address=LEGS['CmdOp']['register'], value=SWITCH[command]['CmdOp'])
+#         if read_status1_one_bit(STATUS1[command]) is not required_bool_value:
+#             print_error(f'Ошибка выполнения команды {command} на СmdOp')
 
 
 def switch_position(command: Literal['AHLimEn', 'WHLimEn', 'THLimEn', 'TLLimEn', 'WLLimEn', 'ALLimEn'],
