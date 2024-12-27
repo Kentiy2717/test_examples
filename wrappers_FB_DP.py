@@ -1,5 +1,5 @@
 from func_print_console_and_write_file import print_error
-from constants_FB_DP import START_VALUE, STATUS1, SWITCH
+from constants_FB_DP import START_VALUE, SWITCH
 from read_and_write_functions_FB_DP import write_CmdOp
 
 
@@ -11,7 +11,7 @@ def reset_initial_values(func):
             if this_is_write_error(address=reg_and_val['register'], value=reg_and_val['start_value']) is True:
                 print_error(f'Ошибка записи на ножку {name}')
         for command in SWITCH:
-            switch_position(command=command, required_bool_value=True)
+            switch_position(command=command, required_bool_value=False)
         write_CmdOp(command='Kvitir')
         result = func(*args, **kwargs)
         return result

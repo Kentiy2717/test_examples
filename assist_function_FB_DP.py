@@ -3,7 +3,7 @@ from typing import Literal
 from common_read_and_write_functions import write_holding_register
 from constants_FB_DP import CMDOP, CMDOP_REGISTER, STATUS1
 from func_print_console_and_write_file import print_error
-from read_and_write_functions_FB_AP import reset_CmdOp
+from read_and_write_functions_FB_DP import reset_CmdOp
 from read_stutuses_and_message_FB_DP import read_status1_one_bit
 
 

@@ -127,7 +127,6 @@ def checking_generation_messages_and_msg_off(not_error):  # Готово.
             'Тест не может быть выполнен. Проверьте тест №1. Ошибка записи значений в предыдущих тестах.'
         )
         not_error = False
-        return not_error
 
     # Читаем сообщения. Получаем значение уставки.
     old_messages = read_all_messages()
@@ -165,7 +164,6 @@ def checking_generation_messages_and_msg_off(not_error):  # Готово.
             # Если уставка сработала и сообщение не формируется, то проверка пройдена.
             if AHAct is True and read_new_messages(old_messages) == []:
                 print_text_grey(f'Сообщение о превышении аварийной уставки не сформировано. При MsgOff={MsgOff}')
-                return not_error
             else:
                 Out = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
                 print_error(
@@ -173,7 +171,6 @@ def checking_generation_messages_and_msg_off(not_error):  # Готово.
                     f'Дальнейшие тесты нецелесообразны. (AHAct={AHAct}, Out={Out}, AHLim={AHLim_val}).'
                 )
                 not_error = False
-                return not_error
         else:
             Out = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
             print_error(
@@ -181,7 +178,6 @@ def checking_generation_messages_and_msg_off(not_error):  # Готово.
                 f'(MsgOn={MsgOff}, AHAct={AHAct}, Out={Out}, AHLim={AHLim_val}).'
             )
             not_error = False
-            return not_error
     else:
         Out = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
         print_error(
@@ -189,7 +185,17 @@ def checking_generation_messages_and_msg_off(not_error):  # Готово.
             f'(MsgOn={MsgOff}, AHAct={AHAct}, Out={Out}, AHLim={AHLim_val}).'
         )
         not_error = False
-        return not_error
+
+    # Меняем режим и снова проверяем.
+    old_messages = read_all_messages()
+    write_CmdOp(command='Imit')
+    new_messages = read_new_messages(old_messages)
+    if new_messages != []:
+        print_error('Ошибка! Сообщение об активации режима "Imit" сформировано, а не должно было сформироваться.')
+        not_error = False
+    else:
+        print_text_grey('Сообщение об активации режима "Imit" не сформировалось.')
+    return not_error
 
 
 @reset_initial_values
@@ -1701,18 +1707,18 @@ def main():
     '''
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    cheсking_on_off_AlarmOff()
-    checking_messages_on_off_setpoints()
-    checking_setpoint_values()
-    checking_setpoint_not_impossible_min_more_max()
-    checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
-    checking_kvitir()
-    checking_the_installation_of_commands_from_different_control_panels()
+    # cheсking_on_off_AlarmOff()
+    # checking_messages_on_off_setpoints()
+    # checking_setpoint_values()
+    # checking_setpoint_not_impossible_min_more_max()
+    # checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
+    # checking_kvitir()
+    # checking_the_installation_of_commands_from_different_control_panels()
 
     print('ОБЩИЕ ПРОВЕРКИ\n')
     # checking_errors_writing_registers()
     # cheking_on_off_for_cmdop()
-    # checking_generation_messages_and_msg_off()
+    checking_generation_messages_and_msg_off()
     # cheking_incorrect_command_cmdop()
     # checking_operating_modes()
     # checking_signal_transfer_low_level_on_middle_level()
@@ -1724,7 +1730,7 @@ def main():
     # checking_DeltaV()
     # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
     # checking_SpeedLim()
-    checking_t01()
+    # checking_t01()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
     # checking_simulation_mode_turn_on()

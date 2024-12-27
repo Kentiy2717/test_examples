@@ -24,23 +24,19 @@ from common_read_and_write_functions import (
 from read_stutuses_and_message_FB_AP import (
     read_PanelSig_one_bit,
     read_status1_one_bit,
-    read_all_messages,
-    read_new_messages,
     read_PanelMode,
     read_PanelState,
     read_PanelAlm_one_bit,
     read_status2_one_bit
 )
-from constants_FB_AP import (
+from constants_FB_DP import (
     INPUT_REGISTER,
-    REGISTERS_AND_VALUE_WRITE_FOR_BEGIN_TEST as LEGS,
     OUT_REGISTER,
-    SPEED_ACT_REGISTER,
     STATUS1
 )
 from assist_function_FB_AP import switch_position, reset_CmdOp, switch_position_for_legs, turn_on_mode
 connect_client()
 
-print(read_int(address=LEGS['T01']['register']))
+print(read_coils(OUT_REGISTER))
 
 close_client()

@@ -7,8 +7,8 @@ START_VALUE = {
     'SensFlt':     {'register': 40114,  'start_value': False},
     'ExtFlt':      {'register': 40115,  'start_value': False},
     'Period':      {'register': 40401,  'start_value': 100},
-    'T01':         {'register': 8000,    'start_value': 0},
-    'CmdOp':       {'register': 8001,    'start_value': 4},
+    'T01':         {'register': 8000,   'start_value': 0},
+    'CmdOp':       {'register': 8001,   'start_value': 4},
 }
 
 WORK_MODES = ('Oos', 'Imt1', 'Imt0', 'Fld', 'Tst')

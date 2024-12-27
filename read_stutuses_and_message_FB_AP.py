@@ -1,5 +1,5 @@
 from encode_and_decode import decoder_bits
-from constants_FB_DP import (
+from constants_FB_AP import (
     STATUS1_REGISTER,
     STATUS2_REGISTER,
     PANEL_SIG_REGISTER,
