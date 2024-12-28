@@ -1,6 +1,6 @@
 import sys
 from time import sleep
-from assist_function_FB_DP import switch_position, turn_on_mode
+from assist_function_FB_DP import check_work_kvitir_off, check_work_kvitir_on, switch_position, turn_on_mode
 from constants_FB_DP import CMDOP, CMDOP_REGISTER, INPUT_REGISTER, OUT_REGISTER, PANELSIG, START_VALUE, STATUS1, SWITCH, WORK_MODES
 from probably_not_used.constants import DETAIL_REPORT_ON
 from encode_and_decode import decode_float
@@ -378,6 +378,105 @@ def checking_checking_signal_transfer_low_level_on_middle_level_and_invers(not_e
 
 @reset_initial_values
 @writes_func_failed_or_passed
+# Проверка установки команд с разных панелей управления.
+def checking_the_installation_of_commands_from_different_control_panels(not_error):
+    print_title('Проверка установки команд с разных панелей управления.')
+
+    msg_original = []
+
+    # Проходим циклом по всем командам на СmdOp.
+    for command_original, command_int_original in CMDOP.items():
+        print_text_white(f'Проверка команды {command_original}.') if DETAIL_REPORT_ON is False else None
+
+        # В цикле выполняем проверку для каждого ПУ.
+        for i in range(8):
+            old_messages = read_all_messages()
+
+            # Формируем команду по формуле. Читаем сообщения. команда с i=0 считается эталонной.
+            command_int_control_panel = command_int_original + (i * 256)
+            write_CmdOp(command=command_int_control_panel)
+            msg = read_new_messages(old_messages)
+            msg_original = msg[-1] if i == 0 else msg_original
+
+            # Смотрим только последнее сообщение.
+            if msg_original + i == msg[-1]:
+                print_text_grey(f'Проверка команды {command_original} на ПУ №{i} прошла успешно.')
+            else:
+                not_error = False
+                print_error(f'Ошибка проверки команды {command_original} на ПУ №{i}. '
+                            f'Пришла команда {msg[-1]}, а ожидалась {msg_original + i}.')
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+# Проверка работоспособности квитирования. Возникновение при переходе через уставку.
+def checking_kvitir(not_error):
+    print_title('Проверка работоспособности квитирования. Возникновение при переходе через уставку.')
+    # print_error('ПРОВЕРКА ТОЛЬКО НА Input. ВОЗМОЖНО ТРЕБУЕТСЯ ПРОВЕРИТЬ НА ДРУГИХ ПАРАМЕТРАХ.')
+
+    # Провереяем, что квитирование не требуется.
+    old_messages = read_all_messages()
+    not_error = check_work_kvitir_off(old_messages=old_messages, not_error=not_error, msg=[])
+    if not_error is False:
+        print_error('Квитирование не сбросилось в декораторе reset_initial_values. '
+                    'Дальнейшее тестирование нецелесообразно.')
+        return not_error
+
+    print_text_white('\nПроверка сработки квитировании при переключении Input.')
+
+    # Читаем сообщения. Переключаем Input в True. Проверяем включение сигнала "Требуется квитирование".
+    old_messages = read_all_messages()
+    write_coil(address=INPUT_REGISTER, value=True)
+    not_error = check_work_kvitir_on(old_messages=old_messages, not_error=not_error, msg=[8])
+
+    # Читаем сообщением и снимаем сигнал "Требуется квитирование" командой на CmdOp.
+    # Проверяем отключение сигнала "Требуется квитирование".
+    old_messages = read_all_messages()
+    write_CmdOp(command='Kvitir')
+    not_error = check_work_kvitir_off(old_messages=old_messages, not_error=not_error, msg=[23100])
+
+    # Читаем сообщения. Переключаем Input в False. Проверяем включение сигнала "Требуется квитирование".
+    old_messages = read_all_messages()
+    write_coil(address=INPUT_REGISTER, value=False)
+    not_error = check_work_kvitir_on(old_messages=old_messages, not_error=not_error, msg=[58])
+
+    # Читаем сообщением и снимаем сигнал "Требуется квитирование" командой на CmdOp.
+    # Проверяем отключение сигнала "Требуется квитирование".
+    old_messages = read_all_messages()
+    write_CmdOp(command='Kvitir')
+    not_error = check_work_kvitir_off(old_messages=old_messages, not_error=not_error, msg=[23100])
+
+    # Аналогично для инверсии.
+    print_text_white('\nПроверка сработки квитировании при переключении инверсии.')
+
+    # Читаем сообщения. Переключаем Input в True. Проверяем включение сигнала "Требуется квитирование".
+    old_messages = read_all_messages()
+    write_CmdOp(command='Invers')
+    not_error = check_work_kvitir_on(old_messages=old_messages, not_error=not_error, msg=[8, 10, 21900])
+
+    # Читаем сообщением и снимаем сигнал "Требуется квитирование" командой на CmdOp.
+    # Проверяем отключение сигнала "Требуется квитирование".
+    old_messages = read_all_messages()
+    write_CmdOp(command='Kvitir')
+    not_error = check_work_kvitir_off(old_messages=old_messages, not_error=not_error, msg=[23100])
+
+    # Читаем сообщения. Переключаем Input в False. Проверяем включение сигнала "Требуется квитирование".
+    old_messages = read_all_messages()
+    write_CmdOp(command='Invers')
+    not_error = check_work_kvitir_on(old_messages=old_messages, not_error=not_error, msg=[58, 60, 21900])
+
+    # Читаем сообщением и снимаем сигнал "Требуется квитирование" командой на CmdOp.
+    # Проверяем отключение сигнала "Требуется квитирование".
+    old_messages = read_all_messages()
+    write_CmdOp(command='Kvitir')
+    not_error = check_work_kvitir_off(old_messages=old_messages, not_error=not_error, msg=[23100])
+
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
 def checking_(not_error):  # .
     print_title('Проверка.')
 
@@ -415,6 +514,7 @@ def main():
     '''
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
+    checking_kvitir()
     # checking_()
 
     print('ОБЩИЕ ПРОВЕРКИ\n')
@@ -424,6 +524,7 @@ def main():
     # cheking_incorrect_command_cmdop()
     # checking_operating_modes()
     # checking_checking_signal_transfer_low_level_on_middle_level_and_invers()
+    # checking_the_installation_of_commands_from_different_control_panels()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
     # checking_()

@@ -307,7 +307,6 @@ def check_write_values_all_setpoints():
 
 def check_st1_PanelSig_new_msg(number_bit_st1, number_bit_PanelSig, old_messages):
     new_msg = read_new_messages(old_messages)
-    new_msg.sort()
     return (read_status1_one_bit(number_bit=number_bit_st1),
             read_PanelSig_one_bit(number_bit=number_bit_PanelSig),
             new_msg)

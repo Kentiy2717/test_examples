@@ -1094,7 +1094,7 @@ def checking_kvitir(not_error):  # ПРОВЕРКА ТОЛЬКО НА УСТАВ
         not_error = False
         return not_error
 
-    # Проверяем включения сигнала "Требуется квитирование".
+    # Проверяем включение сигнала "Требуется квитирование".
     not_error = check_work_kvitir_on(not_error=not_error, old_messages=old_messages, msg=[112])
 
     # Читаем сообщения. Квитируем. Проверяем сработку квитирования.
@@ -1102,7 +1102,7 @@ def checking_kvitir(not_error):  # ПРОВЕРКА ТОЛЬКО НА УСТАВ
     reset_CmdOp()
     write_holding_register(address=LEGS['CmdOp']['register'], value=CMDOP['Kvitir'])
 
-    # Проверяем отключения сигнала "Требуется квитирование".
+    # Проверяем отключение сигнала "Требуется квитирование".
     not_error = check_work_kvitir_off(not_error=not_error, old_messages=old_messages)
 
     # Читаем сообщения. Передаем значение в Input меньше уставки 'THLim'.

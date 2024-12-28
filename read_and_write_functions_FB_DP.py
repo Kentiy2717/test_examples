@@ -16,4 +16,7 @@ def write_CmdOp(command: Literal['Oos', 'Imt1', 'Imt0', 'Fld', 'Tst', 'Invers', 
     '''Обнуляет CmdOp, а потом записывает значение переданнов в command.'''
 
     reset_CmdOp()
-    write_holding_register(address=CMDOP_REGISTER, value=CMDOP[command])
+    if type(command) is str:
+        write_holding_register(address=CMDOP_REGISTER, value=CMDOP[command])
+    else:
+        write_holding_register(address=CMDOP_REGISTER, value=command)
