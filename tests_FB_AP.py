@@ -1169,7 +1169,7 @@ def checking_values_when_switching_modes(not_error):
                 '(SpeedOff, MsgOff, FiltOff, ALLimEn, WLLimEn, TLLimEn, THLimEn, WHLimEn, AHLimEn)'
                 'при переключениях между режимами.')
 
-    # Создаем переменную с кортежем из всех параметров для проверки. 
+    # Создаем переменную с кортежем из всех параметров для проверки.
     params_for_check = ('DeltaV', 'Period', 'ImitInput', 'MaxEV', 'MinEV', 'T01', 'SpeedLim',
                         'AHLim', 'WHLim', 'THLim', 'TLLim', 'WLLim', 'ALLim', 'Hyst', 'Kf')
 
@@ -1637,7 +1637,7 @@ def checking_t01(not_error):
         print_text_white(f'Проверка в режиме {mode}.')
         write_holding_registers_int(address=LEGS['T01']['register'], values=1000)
 
-        # Определяем регистр и значение для записи в зависимости от режима. Квитируем.
+        # Определяем регистр и значение для записи в зависимости от режима. ??Квитируем??.
         if mode != 'Imit':
             Input_register = LEGS['Input']['register']
             Input_value = START_VALUE['RangeMax']['start_value'] - 1

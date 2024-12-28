@@ -39,12 +39,7 @@ from constants_FB_DP import (
 )
 from assist_function_FB_AP import switch_position, reset_CmdOp, switch_position_for_legs, turn_on_mode
 connect_client()
-Out=True
-print(read_holding_registers(address=PANEL_STATE_REGISTER, count=1).registers)
-print(read_holding_registers(address=PANEL_STATE_REGISTER, count=1).registers[0])
-Out1=Out
-print(Out1, Out)
-Out=False
-print(Out1, Out)
+
+write_coil(address=INPUT_REGISTER, value=0, slave=1)
 
 close_client()

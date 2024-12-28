@@ -18,7 +18,8 @@ from common_read_and_write_functions import (
     write_holding_register,
     write_holding_registers,
     read_holding_registers,
-    read_float
+    read_float,
+    write_holding_registers_int
 )
 from read_and_write_functions_FB_DP import write_CmdOp
 from read_messages import read_all_messages, read_new_messages
@@ -605,7 +606,8 @@ def checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_error):  # Готово.
+# Проверка сработки ошибок канала, модуля, сенсора и внешней ошибки.
+def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_error):
     print_title('Проверка сработки ошибок канала, модуля, сенсора и внешней ошибки.')
 
     # Создаем словарь с данными для проверки. Ключи - ошибки, знач. списки значений сообщений.
@@ -711,6 +713,141 @@ def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_err
                             f'Проверь работу тестов count_error={count_error}.')
     return not_error
 
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+# Проверка задержки на срабатывание в режимах Fld, Tst, Imit.
+def checking_t01(not_error):
+    print_title('Проверка задержки на срабатывание в режимах Fld, Tst, Imit.')
+    print_error('ТЕСТ НЕ ПРОХОДИТ, ПОТОМУ ЧТО ЗАДЕРЖКИ НЕ ДОЛЖНО БЫТЬ НА Imt0, Imt1, А Tst ВООБЩЕ РАБОТАЕТ НЕ ВЕРНО СМОТРИ ДЕБАГ!.')
+
+    # Проходим по режимам в цикле. Устанавливаем значение Т01 = 1 сек.
+    for mode in ('Imt0', 'Imt1', 'Fld', 'Tst'):
+        
+        if mode == 'Imt0':
+            write_coil(address=INPUT_REGISTER, value=True)
+
+        # Меняем режим. Устанавливаем значение Т01 = 1 сек и меняем значение Input. Ждем 0,5сек.
+        print_text_white(f'\nПроверка в режиме {mode}.')
+        write_holding_registers_int(address=START_VALUE['T01']['register'], values=1000)
+        write_CmdOp(command='Kvitir')
+        not_error = turn_on_mode(mode=mode)
+        write_coil(address=INPUT_REGISTER, value=True)
+
+        # Проверяем активацию в Status1 и Kvitir. Проверяем изменение в Out.
+        number_bit = STATUS1['DP_Act'] if mode != 'Imt0' else STATUS1['DP_Inact']
+        number_bit_kvitir = STATUS1['Kvitir']
+        st1 = read_status1_one_bit(number_bit=number_bit)
+        st1_kvitir = read_status1_one_bit(number_bit=number_bit_kvitir)
+        Out = read_coils(address=OUT_REGISTER, bit=0)
+        expected_Out = True if mode == 'Imt1' else False
+        bool_value = True if mode == 'Imt1' or mode == 'Imt0' else False
+        if (st1 and st1_kvitir) is bool_value and Out == expected_Out:
+            print_text_grey('Проверка изменения DP, через 0.5сек после изменения Input при T01=1сек '
+                            'прошла успешно.')
+        else:
+            not_error = False
+            print_error('Ошибка изменения DP, через 0.5сек при T01=1сек: ')
+            if st1 is not bool_value:
+                print_error(f' - В Status1 в бите №{number_bit} - {st1}, а ожидалось {not bool_value}.')
+            if st1_kvitir is not bool_value:
+                print_error(f' - В Status1 в бите №{number_bit_kvitir} - {st1_kvitir}, а ожидалось {not bool_value}.')
+            if Out != expected_Out:
+                print_error(f' - В Out - {Out}, а ожидалось {expected_Out}.')
+
+        # Ждем еще 1сек и проверяем активацию в Status1 и Kvitir и изменение DP.
+        sleep(1)
+        st1 = read_status1_one_bit(number_bit=number_bit)
+        st1_kvitir = read_status1_one_bit(number_bit=number_bit_kvitir)
+        Out = read_coils(address=OUT_REGISTER, bit=0)
+        expected_Out = True if mode == 'Imt1' or mode == 'Fld' else False
+        bool_value = False if mode == 'Tst' else True
+        if (st1 and st1_kvitir) is bool_value and Out == expected_Out:
+            print_text_grey('Проверка изменения DP, через 1сек после изменения Input при T01=1сек '
+                            'прошла успешно.')
+        else:
+            not_error = False
+            print_error('Ошибка изменения DP, через 1сек при T01=1сек: ')
+            if st1 is not bool_value:
+                print_error(f' - В Status1 в бите №{number_bit} - {st1}, а ожидалось {bool_value}.')
+            if st1_kvitir is not bool_value:
+                print_error(f' - В Status1 в бите №{number_bit_kvitir} - {st1_kvitir}, а ожидалось {bool_value}.')
+            if Out != expected_Out:
+                print_error(f' - В Out - {Out}, а ожидалось {expected_Out}.')
+
+        # Возвращаем в исходное положение значение DP и квитируем.
+        write_holding_registers_int(address=START_VALUE['T01']['register'], values=0)
+        not_error = turn_on_mode(mode='Fld')
+        write_coil(address=INPUT_REGISTER, value=False)
+    return not_error
+
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+# Проверка неизменности значений Period, T01,
+# а также сохранения положения переключателей (MsgOff, Invers) при переключениях между режимами.
+def checking_values_when_switching_modes(not_error):
+    print_title('Проверка неизменности значений Period, T01, а также сохранения положения \n'
+                'переключателей (MsgOff, Invers) при переключениях между режимами.')
+
+    # Создаем переменную с кортежем из всех параметров для проверки.
+    params_for_check = ('Period', 'T01')
+
+    # Создаем вспомогательную функцию для формирования словаря значений параметров и переключателей.
+    def get_checklist():
+        checklist = [(param, read_float(address=START_VALUE[param]['register'])) for param in params_for_check]
+        checklist.extend(
+            [(name, read_status1_one_bit(number_bit=STATUS1[name])) for name in SWITCH]
+        )
+        return checklist
+
+    # Создаем вспомогательную функцию для проверки.
+    def base_check(not_error):
+
+        # Проходим двойным циклом по кортежу с командами для переключения в разные режимы.
+        for mode1 in ('Fld', 'Tst', 'Oos', 'Imt1', 'Imt0'):
+            for mode2 in ('Fld', 'Tst', 'Oos', 'Imt1', 'Imt0'):
+
+                # Если они совпадают, то не проводим проверку.
+                if mode1 == mode2:
+                    break
+
+                # Включаем режим переданный в параметре "mode1".
+                not_error = turn_on_mode(mode=mode1)
+
+                # Создаем список для записи всех значений параметров и переключателей в режиме mode1.
+                checklist_before = get_checklist()
+
+                # Включаем режим "mode2". Сравниваем checklist_before со списком, полученным после переключения режима.
+                not_error = turn_on_mode(mode=mode2)
+                checklist_after = get_checklist()
+                if checklist_before == checklist_after:
+                    print_text_grey(f'Проверка переключения с {mode1} на {mode2} прошла успешно.')
+                else:
+                    not_error = False
+
+                    # Выводим сообщение об ошибке со списком изменившихся параметров и переключателей.
+                    print_error('Ошибка! Следующие параметры отличаются:')
+                    for i in range(len(checklist_after)):
+                        if checklist_before[i] != checklist_after[i]:
+                            print_error(f'  - {checklist_before[i][0]}: до - '
+                                        f'{checklist_before[i][1]}, после - {checklist_after[i][1]}')
+        return not_error
+
+    # Проводим проверку с выключателями в положении False.
+    print_text_white('Старт проверки с пеерключателями в положении False.')
+    not_error = base_check(not_error=not_error)
+
+    # Выставляем все переключатели в положение True. Проводим проверку повторно.
+    for command in SWITCH:
+        switch_position(command=command, required_bool_value=True)
+    print_text_white('Старт проверки с пеерключателями в положении True.')
+    not_error = base_check(not_error=not_error)
+    return not_error
+
+
 @reset_initial_values
 @writes_func_failed_or_passed
 def checking_(not_error):  # .
@@ -751,7 +888,9 @@ def main():
     # checking_checking_signal_transfer_low_level_on_middle_level_and_invers()
     # checking_the_installation_of_commands_from_different_control_panels()
     # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
+    # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
+    # checking_t01()
+    checking_values_when_switching_modes()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
     # checking_checking_imit1_and_imit0()
