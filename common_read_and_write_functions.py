@@ -25,8 +25,11 @@ def write_coil(address, value, slave=1):
 
 
 @sleep_time_after_operation
-def read_coils(address, count=1, slave=1):
-    return client.read_coils(address=address, count=count, slave=slave)
+def read_coils(address, count=1, bit=None, slave=1):
+    if bit is not None:
+        return client.read_discrete_inputs(address=address, count=count, slave=slave).bits[bit]
+    else:
+        return client.read_coils(address=address, count=count, slave=slave)
 
 
 @sleep_time_after_operation

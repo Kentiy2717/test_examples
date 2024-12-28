@@ -1,7 +1,7 @@
 import sys
 from time import sleep
-from assist_function_FB_DP import check_work_kvitir_off, check_work_kvitir_on, switch_position, turn_on_mode
-from constants_FB_DP import BAD_REGISTER, CMDOP, CMDOP_REGISTER, INPUT_REGISTER, OUT_REGISTER, PANELSIG, PANELSTATE, START_VALUE, STATUS1, STATUS2, SWITCH, WORK_MODES
+from assist_function_FB_DP import check_work_kvitir_off, check_work_kvitir_on, switch_position, switch_position_for_legs, turn_on_mode
+from constants_FB_DP import BAD_REGISTER, CMDOP, CMDOP_REGISTER, INPUT_REGISTER, OUT_REGISTER, PANELSIG, PANELSTATE, START_VALUE, STATUS1, STATUS2, SWITCH, VALUE_UNRELIABILITY, WORK_MODES
 from probably_not_used.constants import DETAIL_REPORT_ON
 from encode_and_decode import decode_float
 from func_print_console_and_write_file import (
@@ -111,6 +111,7 @@ def cheking_on_off_for_cmdop(not_error):
 # Проверка включения и отключения режима генерации сообщений (командой на CmdOp).
 def checking_generation_messages_and_msg_off(not_error):
     print_title('Проверка включения и отключения режима генерации сообщений (командой на CmdOp).')
+    print_error('ОШИБКА ПО ПРЕЧИНЕ ТОГО, ЧТО БАГ. СООБЩЕНИЯ НЕ ДОЛЖНЫ ФОРМИРОАТЬСЯ.')
 
     # Убеждаемся, что генерация сообщений отключена.
     switch_position(command='MsgOff', required_bool_value=False)
@@ -448,12 +449,13 @@ def checking_off_messages_and_statuses_and_kvitir_in_masking_mode(not_error):  #
             print_error(' - Квитирование не работает. В Status1 31 бит равен True , а ожидалось False.')
     return not_error
 
+
 @reset_initial_values
 @writes_func_failed_or_passed
 # Проверка работоспособности квитирования. Возникновение при переходе через уставку.
 def checking_kvitir(not_error):
     print_title('Проверка работоспособности квитирования. Возникновение при переходе через уставку.')
-    # print_error('ПРОВЕРКА ТОЛЬКО НА Input. ВОЗМОЖНО ТРЕБУЕТСЯ ПРОВЕРИТЬ НА ДРУГИХ ПАРАМЕТРАХ.')
+    print_error('ОШИБКА ПО ПРИЧИНЕ ТОГО, ЧТО ДОЛЖНО БЫТЬ 21900, А НЕ 21000.')
 
     # Провереяем, что квитирование не требуется.
     old_messages = read_all_messages()
@@ -517,13 +519,197 @@ def checking_kvitir(not_error):
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_(not_error):  # .
-    print_title('Проверка.')
+# Проверка корректности значений в режиме «Имитация 1» и «Имитация 0» при изменении в Input и включения инверсии.
+def checking_checking_imit1_and_imit0(not_error):
+    print_title('Проверка корректности значений в режиме «Имитация 1» и «Имитация 0» '
+                'при изменении в Input и включения инверсии.')
 
+    # Создаем вспомогательную функцию для проверки.
+    def check_imit1_and_imit0(value, not_error):
 
+        # Устанавливаем Input в value. Считываем Out и проверяем соответствие режиму.
+        write_coil(address=INPUT_REGISTER, value=value)
+        Out = read_coils(address=OUT_REGISTER, bit=0)
+        if Out is True and mode == 'Imt1':
+            print_text_grey(f'В режиме {mode}(Имитация 1) при изменении Input в {value}, Out = {Out}. '
+                            'Проверка прошла успешно.')
+        elif Out is False and mode == 'Imt0':
+            print_text_grey(f'В режиме {mode}(Имитация 0) при изменении Input в {value}, Out = {Out}. '
+                            'Проверка прошла успешно.')
+        else:
+            not_error = False
+            print_error(f'Ошибка! В режиме {mode} при изменении Input в {value}, Out = {Out}.')
+        return not_error
 
+    # Проходим в цикле по режимам "Имитация 1" и "Имитация 0".
+    for mode in ('Imt1', 'Imt0'):
+        not_error = turn_on_mode(mode=mode)
+
+        # Проверяем при Input = True.
+        not_error = check_imit1_and_imit0(value=True, not_error=not_error)
+
+        # Проверяем при Input = False.
+        not_error = check_imit1_and_imit0(value=False, not_error=not_error)
     return not_error
 
+
+@reset_initial_values
+@writes_func_failed_or_passed
+# Проверка на непрохождении сигнала недостоверности значения DP при неисправности
+# модуля, канала, датчика и внешней ошибке в режимах "Имитация1", "Имитация0", "Маскирование".
+def checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking(not_error):
+    print_title('Проверка на непрохождении сигнала недостоверности значения DP при '
+                'неисправности модуля, канала, датчика и внешней ошибке. '
+                'в режимах "Имитация1", "Имитация0", "Маскирование".')
+
+    # Проходим циклом по всем режимам работы (кроме режима "Fld"), включаем поочередно и тестируем.
+    for mode in ('Oos', 'Imt1', 'Imt0'):
+        turn_on_mode(mode=mode)
+        print_text_white(f'\nПроверка в режиме {mode}.')
+
+        # В цикле проходим по всем ошибкам.
+        for error in ['ChFlt', 'ModFlt', 'SensFlt', 'ExtFlt']:
+
+            # Читаем сообщения. Устанавливаем сигнал недостоверности.
+            old_messages = read_all_messages()
+            switch_position_for_legs(command=error, required_bool_value=True)
+
+            # Читаем новые сообщения, Status1, Status2, PanelAlm, PanelState и выполняем проверку.
+            number_bit_st2 = STATUS2[error]
+            PanelState_Bad = PANELSTATE['Bad']
+            new_messages = read_new_messages(old_messages)
+            st1 = read_status1_one_bit(number_bit=STATUS1['Bad'])
+            st2 = read_status2_one_bit(number_bit=number_bit_st2)
+            PanelAlm = read_PanelAlm_one_bit(number_bit=number_bit_st2)
+            PanelState = read_PanelState()
+
+            if new_messages == [] and (st1 and st2 and PanelAlm) is False and PanelState != PanelState_Bad:
+                print_text_grey(f'В режиме {mode} проверка непрохождения сигнала '
+                                f'{error}({VALUE_UNRELIABILITY[error]}) прошла успешно.')
+            else:
+                not_error = False
+                print_error(f'В режиме {mode} произошла ошибка при проверке непрохождения сигнала '
+                            f'{error}({VALUE_UNRELIABILITY[error]}).')
+                if new_messages != []:
+                    print_error(f' - Пришли сообщения {new_messages}, хотя не должны были.')
+                if st1 is True:
+                    print_error(' - В Status1 7 бит равен True, а должен быть False.')
+                if st2 is True:
+                    print_error(f' - В Status2 {number_bit_st2} бит равен True, а должен быть False.')
+                if PanelAlm is True:
+                    print_error(f' - В PanelAlm {number_bit_st2} бит равен True, а должен быть False.')
+                if PanelState == PanelState_Bad:
+                    print_error(f' - В PanelState пришло {PanelState} , а ожидалось {PanelState_Bad}.')
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_error):  # Готово.
+    print_title('Проверка сработки ошибок канала, модуля, сенсора и внешней ошибки.')
+
+    # Создаем словарь с данными для проверки. Ключи - ошибки, знач. списки значений сообщений.
+    data = {
+        'ChFlt':    {'bit': 0, 'msg_by_True': [204], 'msg_by_False': [254]},
+        'ModFlt':   {'bit': 1, 'msg_by_True': [206], 'msg_by_False': [256]},
+        'SensFlt':  {'bit': 2, 'msg_by_True': [208], 'msg_by_False': [258]},
+        'ExtFlt':   {'bit': 3, 'msg_by_True': [210], 'msg_by_False': [260]}
+    }
+
+    # Проверяем в цикле режим "Полевая обработка" и "Тестирование".
+    for mode in ('Fld', 'Tst'):
+        turn_on_mode(mode=mode)
+        print_text_white(f'\nПроверка в режиме {mode}.')
+
+        # Проходим по значениям словаря с наименованием ошибок.
+        for name, msg in data.items():
+
+            # ПРОВЕРКА ВКЛЮЧЕНИЯ.
+            # Читаем сообщения dыбираем какой бит смотреть в status2 и PanelAlm.
+            old_message = read_all_messages()
+            bit = data[name]['bit']
+            #  Переключаем значение ошибки в True. Проверяем что ошибки записи нет.
+            if this_is_write_error(address=START_VALUE[name]['register'], value=True) is True:
+                print_error(f'Ошибка записи значения False в {name}. Проверьте адрес регистра.')
+                not_error = False
+                continue
+
+            # Читаем сообщения, создаем счетчик ошибок.
+            new_messages = read_new_messages(old_message)
+            standart_msg = msg['msg_by_True']
+            count_error = 0
+
+            # Если сообщения не совпадают с ожидаемыми, то ошибка.
+            if new_messages != standart_msg:
+                print_error(f'Ошибка включения {name}! Сообщения не соответствуют ожидаемым.'
+                            f'Пришло {new_messages}, а ожидалось {standart_msg}.')
+                count_error += 1
+            # Если значение битов status1(7), status2(bit), PanelAlm(bit) - False, то ошибка.
+            if read_status1_one_bit(7) is False:
+                print_error(f'Ошибка включения {name}! 7 бит status1={read_status1_one_bit(7)}.')
+                count_error += 1
+            if read_status2_one_bit(bit) is False:
+                print_error(f'Ошибка включения {name}! {bit} бит status2={read_status2_one_bit(bit)}.')
+                count_error += 1
+            if read_PanelAlm_one_bit(bit) is False:
+                print_error(f'Ошибка включения {name}! {bit} бит PanelAlm={read_PanelAlm_one_bit(bit)}.')
+                count_error += 1
+
+            # Если count_error = 0 то проверка прошла успешно, если 4, то полностью провалилась, если 1-3 то частично.
+            if count_error == 0:
+                print_text_grey(f'Проверка включиния {name} прошла успешно.')
+            elif count_error in (1, 2, 3):
+                print_text_grey(f'Проверка включиния {name} частично провалена. Подробности выше.')
+                not_error = False
+            elif count_error == 4:
+                print_error(f'Проверка включиния {name} провалена.')
+                not_error = False
+            else:
+                print_error(f'Неизвестная ошибка при проверке включиния {name}. '
+                            f'Проверь работу тестов count_error={count_error}.')
+
+            # ПРОВЕРКА ОТКЛЮЧЕНИЯ.
+            old_message = read_all_messages()
+            # Читаем сообщения. Переключаем значение ошибки в False. Проверяем что ошибки записи нет.
+            if this_is_write_error(address=START_VALUE[name]['register'], value=False) is True:
+                print_error(f'Ошибка записи значения False в {name}. Проверьте адрес регистра.')
+                not_error = False
+                continue
+
+            # Читаем сообщения, обнуляем счетчик ошибок.
+            new_messages = read_new_messages(old_message)
+            standart_msg = msg['msg_by_False']
+            count_error = 0
+
+            # Если сообщения не совпадают с ожидаемыми, то ошибка.
+            if new_messages != standart_msg:
+                print_error(f'Ошибка отключения {name}! Сообщения не соответствуют ожидаемым.'
+                            f'Пришло {new_messages}, а ожидалось {standart_msg}.')
+                count_error += 1
+            # Если значение битов status1(7), status2(0), PanelAlm(0) - False, то ошибка.
+            if read_status1_one_bit(7) is True:
+                print_error(f'Ошибка отключения {name}! 7 бит status1={read_status1_one_bit(7)}.')
+                count_error += 1
+            if read_status2_one_bit(bit) is True:
+                print_error(f'Ошибка отключения {name}! {bit} бит status2={read_status2_one_bit(bit)}.')
+                count_error += 1
+            if read_PanelAlm_one_bit(bit) is True:
+                print_error(f'Ошибка отключения {name}! {bit} бит PanelAlm={read_PanelAlm_one_bit(bit)}.')
+                count_error += 1
+
+            # Если count_error = 0 то проверка прошла успешно, если 4, то полностью провалилась, если 1-3 то частично.
+            if count_error == 0:
+                print_text_grey(f'Проверка отключения {name} прошла успешно.')
+            elif count_error in (1, 2, 3):
+                print_text_grey(f'Проверка отключения {name} частично провалена. Подробности выше.')
+                not_error = False
+            elif count_error == 4:
+                print_error(f'Проверка отключения {name} провалена.')
+                not_error = False
+            else:
+                print_error(f'Неизвестная ошибка при проверке отключения {name}. '
+                            f'Проверь работу тестов count_error={count_error}.')
+    return not_error
 
 @reset_initial_values
 @writes_func_failed_or_passed
@@ -555,7 +741,6 @@ def main():
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
     # checking_kvitir()
-    # checking_()
 
     print('ОБЩИЕ ПРОВЕРКИ\n')
     # checking_errors_writing_registers()
@@ -565,12 +750,17 @@ def main():
     # checking_operating_modes()
     # checking_checking_signal_transfer_low_level_on_middle_level_and_invers()
     # checking_the_installation_of_commands_from_different_control_panels()
+    # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
+    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-    # checking_()
+    # checking_checking_imit1_and_imit0()
 
     print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+    # checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+
+    
+    # checking_()
 
 
 if __name__ == "__main__":
