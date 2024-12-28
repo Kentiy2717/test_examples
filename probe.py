@@ -34,12 +34,14 @@ from read_stutuses_and_message_FB_AP import (
 from constants_FB_DP import (
     INPUT_REGISTER,
     OUT_REGISTER,
+    PANEL_STATE_REGISTER,
     STATUS1
 )
 from assist_function_FB_AP import switch_position, reset_CmdOp, switch_position_for_legs, turn_on_mode
 connect_client()
 Out=True
-print(Out)
+print(read_holding_registers(address=PANEL_STATE_REGISTER, count=1).registers)
+print(read_holding_registers(address=PANEL_STATE_REGISTER, count=1).registers[0])
 Out1=Out
 print(Out1, Out)
 Out=False

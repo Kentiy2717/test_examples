@@ -1747,7 +1747,7 @@ def main():
     # checking_work_setpoint_in_imit_mode_when_write_input()
 
     print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-    # checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 import sys
 from time import sleep
 from assist_function_FB_DP import check_work_kvitir_off, check_work_kvitir_on, switch_position, turn_on_mode
-from constants_FB_DP import CMDOP, CMDOP_REGISTER, INPUT_REGISTER, OUT_REGISTER, PANELSIG, START_VALUE, STATUS1, SWITCH, WORK_MODES
+from constants_FB_DP import BAD_REGISTER, CMDOP, CMDOP_REGISTER, INPUT_REGISTER, OUT_REGISTER, PANELSIG, PANELSTATE, START_VALUE, STATUS1, STATUS2, SWITCH, WORK_MODES
 from probably_not_used.constants import DETAIL_REPORT_ON
 from encode_and_decode import decode_float
 from func_print_console_and_write_file import (
@@ -410,6 +410,46 @@ def checking_the_installation_of_commands_from_different_control_panels(not_erro
 
 @reset_initial_values
 @writes_func_failed_or_passed
+def checking_off_messages_and_statuses_and_kvitir_in_masking_mode(not_error):  # Делаю.
+    print_title('Проверка отсутствия генерации сообщений и статусов, в режиме "Маскирование".')
+
+    # Включаем режим "Маскирование". Читаем сообщения. Устанавливаем сигнал недостоверности.
+    turn_on_mode(mode='Oos')
+    old_messages = read_all_messages()
+    write_coil(address=START_VALUE['ExtFlt']['register'], value=True)
+
+    # Читаем сообщения, статусы и ножку Bad, бит квитирования. Выполняем проверку.
+    new_messages = read_new_messages(old_messages)
+    st1 = read_status1_one_bit(number_bit=STATUS1['Bad'])
+    st1_kvit = read_status1_one_bit(number_bit=STATUS1['Kvitir'])
+    st2 = read_status2_one_bit(number_bit=STATUS2['ExtFlt'])
+    PanelAlm = read_PanelAlm_one_bit(number_bit=STATUS2['ExtFlt'])
+    PanelState = read_PanelState() == PANELSTATE['Oos']
+    Bad = read_discrete_inputs(address=BAD_REGISTER, bit=0)
+    if new_messages == [] and PanelState and (st1 and st2 and PanelAlm and Bad and st1_kvit) is False:
+        print_text_grey('Проверка отсутствия генерации сообщений и статусов, при режиме "Маскирование" прошла успешно.')
+    else:
+        not_error = False
+        print_error('При проверке отсутствия генерации сообщений и статусов, при режиме "Маскирование" '
+                    'произошла ошибка.')
+        if new_messages != []:
+            print_error(f' - Пришли сообщения {new_messages}, хотя не должны были.')
+        if st1 is True:
+            print_error(' - В Status1 7 бит равен True, а должен быть False.')
+        if st2 is True:
+            print_error(f' - В Status2 {STATUS2["HightErr"]} бит равен True, а должен быть False.')
+        if PanelAlm is True:
+            print_error(f' - В PanelAlm {STATUS2["HightErr"]} бит равен True, а должен быть False.')
+        if PanelState != PANELSTATE['Oos']:
+            print_error(f' - В PanelState пришло {PanelState} , а ожидалось {PANELSTATE["Oos"]}.')
+        if Bad is True:
+            print_error(f' - В Bad пришло {Bad} , а ожидалось False.')
+        if st1_kvit is True:
+            print_error(' - Квитирование не работает. В Status1 31 бит равен True , а ожидалось False.')
+    return not_error
+
+@reset_initial_values
+@writes_func_failed_or_passed
 # Проверка работоспособности квитирования. Возникновение при переходе через уставку.
 def checking_kvitir(not_error):
     print_title('Проверка работоспособности квитирования. Возникновение при переходе через уставку.')
@@ -514,7 +554,7 @@ def main():
     '''
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    checking_kvitir()
+    # checking_kvitir()
     # checking_()
 
     print('ОБЩИЕ ПРОВЕРКИ\n')
@@ -530,7 +570,7 @@ def main():
     # checking_()
 
     print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-    # checking_()
+    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
 
 
 if __name__ == "__main__":
