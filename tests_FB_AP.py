@@ -202,7 +202,6 @@ def checking_generation_messages_and_msg_off(not_error):  # Готово.
 @writes_func_failed_or_passed
 def cheking_incorrect_command_cmdop(not_error):  # Готово.
     print_title('Проверка формирования кода 20001 при записи некорректной команды на CmdOp.')
-    switch_position(command='MsgOff', required_bool_value=False)
     for command in [900, 949, 999]:
         reset_CmdOp()
         old_messages = read_all_messages()                                                                              # Читаем сообщения.
@@ -301,8 +300,14 @@ def checking_operating_modes(not_error):  # Готово.
         if new_messages == data[command]['messages'] and status1 is True and PanelMode == data[command]['PanelMode']:
             print_text_grey(f'Режим {command} успешно активирован. Проверка пройдена.')
         else:
-            print_error(f'Ошибка! Режим {command} не активирован. {new_messages}')
             not_error = False
+            print_error(f'Ошибка! Режим {command} не активирован. {new_messages}')
+            if new_messages != data[command]['messages']:
+                print_error(f'Пришло {new_messages}, а ожидалось {data[command]["messages"]}.')
+            if status1 is False:
+                print_error(f'Значение status1={status1}, а ожидалось True.')
+            if PanelMode != data[command]['PanelMode']:
+                print_error(f'В PanelMode пришло - {PanelMode}, а ожидалось {data[command]["PanelMode"]}.')
     return not_error
 
 
@@ -1718,7 +1723,7 @@ def main():
     print('ОБЩИЕ ПРОВЕРКИ\n')
     # checking_errors_writing_registers()
     # cheking_on_off_for_cmdop()
-    checking_generation_messages_and_msg_off()
+    # checking_generation_messages_and_msg_off()
     # cheking_incorrect_command_cmdop()
     # checking_operating_modes()
     # checking_signal_transfer_low_level_on_middle_level()

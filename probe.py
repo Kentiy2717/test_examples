@@ -8,6 +8,8 @@ from encode_and_decode import (encode_float,
                              decode_int,
                              decoder_bits,
                              )
+from read_and_write_functions_FB_DP import write_CmdOp
+from read_messages import read_all_messages, read_new_messages
 from wrappers_FB_AP import reset_initial_values
 # sleep(5)
 from common_read_and_write_functions import (
@@ -36,7 +38,11 @@ from constants_FB_DP import (
 )
 from assist_function_FB_AP import switch_position, reset_CmdOp, switch_position_for_legs, turn_on_mode
 connect_client()
-
-print(read_coils(OUT_REGISTER))
+Out=True
+print(Out)
+Out1=Out
+print(Out1, Out)
+Out=False
+print(Out1, Out)
 
 close_client()

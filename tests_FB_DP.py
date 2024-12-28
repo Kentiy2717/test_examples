@@ -1,6 +1,7 @@
+import sys
 from time import sleep
-from assist_function_FB_DP import switch_position
-from constants_FB_DP import INPUT_REGISTER, OUT_REGISTER, PANELSIG, START_VALUE, STATUS1, SWITCH
+from assist_function_FB_DP import switch_position, turn_on_mode
+from constants_FB_DP import CMDOP, CMDOP_REGISTER, INPUT_REGISTER, OUT_REGISTER, PANELSIG, START_VALUE, STATUS1, SWITCH, WORK_MODES
 from probably_not_used.constants import DETAIL_REPORT_ON
 from encode_and_decode import decode_float
 from func_print_console_and_write_file import (
@@ -111,7 +112,7 @@ def cheking_on_off_for_cmdop(not_error):
 def checking_generation_messages_and_msg_off(not_error):
     print_title('Проверка включения и отключения режима генерации сообщений (командой на CmdOp).')
 
-    # Убеждаемся, что генерация сообщений и включена.
+    # Убеждаемся, что генерация сообщений отключена.
     switch_position(command='MsgOff', required_bool_value=False)
     write_coil(address=INPUT_REGISTER, value=False)
 
@@ -169,11 +170,209 @@ def checking_generation_messages_and_msg_off(not_error):
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_(not_error):  # .
-    print_title('Проверка работы переключателей (командой на CmdOp).')
+# Проверка формирования кода 20001 при записи некорректной команды на CmdOp.
+def cheking_incorrect_command_cmdop(not_error):
+    print_title('Проверка формирования кода 20001 при записи некорректной команды на CmdOp.')
+    for command in [900, 949, 999]:
+        old_messages = read_all_messages()
+        write_holding_register(address=CMDOP_REGISTER, value=command)
+        new_messages = read_new_messages(old_messages)
+        if 20001 in new_messages:
+            print_text_grey(f'При передачи команды {command} на CmdOp сформирован ожидаемый код сообщения - 20001.')
+        else:
+            print_error(f'При передачи команды {command} на CmdOp сформирован код сообщения отличный от ожидаемого. '
+                        f'message={new_messages}')
+            not_error = False
+    return not_error
 
 
+@reset_initial_values
+@writes_func_failed_or_passed
+# Проверка возможности включения режимов командой на CmdOp.
+def checking_operating_modes(not_error):
+    print_title('Проверка возможности включения режимов командой на CmdOp.')
+    # Создаем словарь для проверки с наименованиями команд режимов и сообщений при переходе на данные режимы.
+    data = {
+        'Oos':   {'PanelMode': 1,  'messages': [20100]},
+        'Imt1':  {'PanelMode': 2,  'messages': [2,  8, 51, 20200]},
+        'Imt0':  {'PanelMode': 3,  'messages': [3, 52, 158, 20300]},
+        'Fld':   {'PanelMode': 4,  'messages': [4, 53, 20400]},
+        'Tst':   {'PanelMode': 5,  'messages': [5, 54, 20500]},
+        'Imit1': {'PanelMode': 2,  'messages': [2,  8, 55, 20200]},
+    }
+    Imit1 = 0  # переменная для получения значений при втором проходе Imit1.
+    # Перебираем в цикле команды для включения режимов (Oos, Imit, Tst, Fld, Imit).
+    for command in ('Oos', 'Imt1', 'Imt0', 'Fld', 'Tst', 'Imt1'):
 
+        # Читаем сообщения, записываем в переменную и сортируем. Подаем команду на запись на ножку CmdOp.
+        old_messages = read_all_messages()
+        write_holding_register(address=CMDOP_REGISTER, value=CMDOP[command])
+
+        # Каждый проход через 'Imit' увеличиваем Imit1 на 1.
+        Imit1 += 1 if command == 'Imt1' else 0
+
+        # Читаем новые сообщения, status1 и PanelMode.
+        new_messages = read_new_messages(old_messages)
+        new_messages.sort()
+        status1 = read_status1_one_bit(number_bit=STATUS1[command])
+        PanelMode = read_PanelMode()
+
+        # Если это второй проход через 'Imit', то меняем command.
+        command = 'Imit1' if Imit1 == 2 else command
+
+        # Проверяем активацию режимов по сообщениям, status1 и PanelMode. Если соответствуют ожидаемым
+        # значениям из словаря data, то проверка пройдена.
+        if new_messages == data[command]['messages'] and status1 is True and PanelMode == data[command]['PanelMode']:
+            print_text_grey(f'Режим {command} успешно активирован. Проверка пройдена.')
+        else:
+            not_error = False
+            print_error(f'Ошибка! Режим {command} не активирован. {new_messages}')
+            if new_messages != data[command]['messages']:
+                print_error(f'Пришло {new_messages}, а ожидалось {data[command]["messages"]}.')
+            if status1 is False:
+                print_error(f'Значение status1={status1}, а ожидалось True.')
+            if PanelMode != data[command]['PanelMode']:
+                print_error(f'В PanelMode пришло - {PanelMode}, а ожидалось {data[command]["PanelMode"]}.')
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+# Проверка прохождения сигнала с нижнего уровня на средний с инверсией и без на разных режимах.
+def checking_checking_signal_transfer_low_level_on_middle_level_and_invers(not_error):  # .
+    print_title('Проверка прохождения сигнала с нижнего уровня на средний, генерации сообщений и статусов'
+                ' при переключении между режимами и включения инверсии.')
+
+    print_error('\nТест не проходит, потому что в режиме Tst значение в Out не должно меняться при изменении Input.')
+
+    # Создаем функцию для переключения инверсии и проверку включения по статусам и сообщения во всех режимах.
+    def switch_inversion(required_bool_value, mode, not_error=not_error):
+
+        # Создаем список ожидаемых сообщений при переключении инверсии.
+        # !!!!! ТУТ НАДО 21900 вместо 21000 !!!!!
+        if mode == 'Oos':
+            expected_msg = [21000]
+        elif mode == 'Imt1' or mode == 'Imt0':
+            expected_msg = [10, 21000] if required_bool_value is True else [60, 21000]
+        elif mode == 'Tst' or mode == 'Fld':
+            expected_msg = [10, 58, 21000] if required_bool_value is True else [58, 60, 21000]
+
+        # Читаем Status1 и PanelSig. Смотрим по ним в каком состоянии сейчас инверсия.
+        st1 = read_status1_one_bit(number_bit=STATUS1['Invers'])
+        PanelSig = read_PanelSig_one_bit(number_bit=PANELSIG['Invers'])
+
+        # Если статусы совпадают и инверсия в значении required_bool_value, то ничего не делаем.
+        if st1 == PanelSig and (st1 and PanelSig) is required_bool_value:
+            return not_error
+        else:
+            # Если статусы не совпадают, то выводим ошибку, иначе подаем команду на CmdOp и проверяем состояние.
+            if st1 != PanelSig:
+                not_error = False
+                print_error(f'Ошибка! Status1(10 бит={st1}) не равен PanelSig(0 бит={PanelSig}), должны быть равны.')
+                return not_error
+            else:
+                old_messages = read_all_messages()
+                write_CmdOp(command='Invers')
+
+            # Читаем сообщения, Status1 и PanelSig. Смотрим по ним в каком состоянии сейчас инверсия.
+            msg = read_new_messages(old_messages)
+            st1 = read_status1_one_bit(number_bit=STATUS1['Invers'])
+            PanelSig = read_PanelSig_one_bit(number_bit=PANELSIG['Invers'])
+
+            # Если инверсия в значении required_bool_value, то ничего не делаем.
+            if (st1 and PanelSig) is required_bool_value and msg == expected_msg:
+                print_text_grey(f'Инверсия успешно переключена на {required_bool_value} в режиме {mode}.')
+                return not_error
+            else:
+                not_error = False
+                print_error(f'Ошибка! Инверсия не переключена в режиме {mode}.')
+                if (st1 and PanelSig) is not required_bool_value:
+                    print_error(f'- Status1(10 бит)={st1}, PanelSig(0 бит)={PanelSig}, '
+                                f'а должны быть {required_bool_value}.')
+                if msg != expected_msg:
+                    print_error(f'- Ошибка! Пришло {msg}. Ожидалось - {expected_msg}.')
+        return not_error
+
+    # Устанавливаем в Input значение True. Считываем Out и сравниваем.
+    write_coil(address=INPUT_REGISTER, value=True)
+    Out = read_discrete_inputs(address=OUT_REGISTER, bit=0)
+    if Out is False:
+        not_error = False
+        print_error(f'Ошибка! Сигнал с НУ не прошел на СУ. Out={Out}, а должен быть True.'
+                    ' Дальнейшее тестирование нецелесообразно.')
+        sys.exit()
+
+    # Перебираем режимы и проверяем.
+    for mode in WORK_MODES:
+
+        # Переключаем режим.
+        turn_on_mode(mode=mode)
+        print_text_white(f'\nПроверка режима {mode}.')
+
+        # Создаем переменную с ожидаемым результатом для каждого режима после инверсии.
+        expected_Out = None
+        if mode == 'Oos' or mode == 'Tst' or mode == 'Fld':
+            expected_Out = Out
+        elif mode == 'Imt0':
+            expected_Out = False
+        elif mode == 'Imt1':
+            expected_Out = True
+
+        #  Переключаем инверсию в True. Считываем Out и сравниваем.
+        not_error = switch_inversion(required_bool_value=True, mode=mode, not_error=not_error)
+        Out = read_discrete_inputs(address=OUT_REGISTER, bit=0)
+        if Out == expected_Out and mode != 'Fld':
+            print_text_grey(f'В режиме {mode} сигнал с НУ не прошел на СУ. В Out ожидаемый результат.')
+        elif not expected_Out == Out and mode == 'Fld':
+            print_text_grey(f'Сигнал с НУ прошел на СУ в режиме {mode} и был инвертирован. В Out ожидаемый результат.')
+        else:
+            not_error = False
+            print_error(f'Ошибка! В режиме {mode} сигнал с НУ не прошел на СУ или не был инвертирован. '
+                        f'Out={Out}, а должен быть {expected_Out}.')
+
+        # Переключаем значение Input в False. Считываем Out и сравниваем.
+        write_coil(address=INPUT_REGISTER, value=False)
+        Out = read_discrete_inputs(address=OUT_REGISTER, bit=0)
+        if Out == expected_Out and mode != 'Fld':
+            print_text_grey(f'В режиме {mode} сигнал с НУ не прошел на СУ. В Out ожидаемый результат.')
+        elif expected_Out == Out and mode == 'Fld':
+            print_text_grey(f'В режиме {mode} сигнал с НУ не прошел на СУ и был инвертирован. '
+                            'В Out ожидаемый результат.')
+        else:
+            not_error = False
+            print_error(f'Ошибка! В режиме {mode} сигнал с НУ не прошел на СУ или не был инвертирован. '
+                        f'Out={Out}, а должен быть {expected_Out}.')
+
+        # Переключаем инверсию в False.  Считываем Out и сравниваем.
+        not_error = switch_inversion(required_bool_value=False, mode=mode, not_error=not_error)
+        Out = read_discrete_inputs(address=OUT_REGISTER, bit=0)
+        if Out == expected_Out and mode != 'Fld':
+            print_text_grey(f'В режиме {mode} сигнал с НУ не прошел на СУ. В Out ожидаемый результат.')
+        elif not expected_Out == Out and mode == 'Fld':
+            print_text_grey(f'В режиме {mode} сигнал с НУ не прошел на СУ и был инвертирован. '
+                            'В Out ожидаемый результат.')
+        else:
+            not_error = False
+            print_error(f'Ошибка! В режиме {mode} сигнал с НУ не прошел на СУ или не был инвертирован. '
+                        f'Out={Out}, а должен быть {expected_Out}.')
+
+        # Переключаем значение Input в True. Считываем Out и сравниваем.
+        write_coil(address=INPUT_REGISTER, value=True)
+        Out = read_discrete_inputs(address=OUT_REGISTER, bit=0)
+        if Out == expected_Out and mode != 'Fld':
+            print_text_grey(f'В режиме {mode} сигнал с НУ не прошел на СУ. В Out ожидаемый результат.')
+        elif expected_Out == Out and mode == 'Fld':
+            print_text_grey(f'В режиме {mode} сигнал с НУ не прошел на СУ и был инвертирован. '
+                            'В Out ожидаемый результат.')
+        else:
+            not_error = False
+            print_error(f'Ошибка! В режиме {mode} сигнал с НУ не прошел на СУ или не был инвертирован. '
+                        f'Out={Out}, а должен быть {expected_Out}.')
+
+        # Переключаем режим на Fld и возвращаем значение Input в True. Читаем Out.
+        turn_on_mode(mode='Fld')
+        write_coil(address=INPUT_REGISTER, value=True)
+        Out = read_discrete_inputs(address=OUT_REGISTER, bit=0)
     return not_error
 
 
@@ -222,6 +421,9 @@ def main():
     # checking_errors_writing_registers()
     # cheking_on_off_for_cmdop()
     # checking_generation_messages_and_msg_off()
+    # cheking_incorrect_command_cmdop()
+    # checking_operating_modes()
+    # checking_checking_signal_transfer_low_level_on_middle_level_and_invers()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
     # checking_()
