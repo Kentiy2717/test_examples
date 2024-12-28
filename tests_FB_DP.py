@@ -1,7 +1,8 @@
+from itertools import combinations
 import sys
 from time import sleep
 from assist_function_FB_DP import check_work_kvitir_off, check_work_kvitir_on, switch_position, switch_position_for_legs, turn_on_mode
-from constants_FB_DP import BAD_REGISTER, CMDOP, CMDOP_REGISTER, INPUT_REGISTER, OUT_REGISTER, PANELSIG, PANELSTATE, START_VALUE, STATUS1, STATUS2, SWITCH, VALUE_UNRELIABILITY, WORK_MODES
+from constants_FB_DP import BAD_REGISTER, CMDOP, CMDOP_REGISTER, INPUT_REGISTER, OUT_REGISTER, PANELMODE, PANELSIG, PANELSTATE, START_VALUE, STATUS1, STATUS2, SWITCH, VALUE_UNRELIABILITY, WORK_MODES
 from probably_not_used.constants import DETAIL_REPORT_ON
 from encode_and_decode import decode_float
 from func_print_console_and_write_file import (
@@ -241,7 +242,7 @@ def checking_operating_modes(not_error):
 @reset_initial_values
 @writes_func_failed_or_passed
 # Проверка прохождения сигнала с нижнего уровня на средний с инверсией и без на разных режимах.
-def checking_checking_signal_transfer_low_level_on_middle_level_and_invers(not_error):  # .
+def checking_checking_signal_transfer_low_level_on_middle_level_and_invers(not_error):
     print_title('Проверка прохождения сигнала с нижнего уровня на средний, генерации сообщений и статусов'
                 ' при переключении между режимами и включения инверсии.')
 
@@ -783,6 +784,67 @@ def checking_t01(not_error):
     return not_error
 
 
+@reset_initial_values
+@writes_func_failed_or_passed
+def checking_switching_between_modes_in_case_of_errors(not_error):
+    print_title('Проверка возможности перехода из режима "Маскирование" в другие режимы при неисправностях \n'
+                'канала, модуля, сенсора,внешней ошибки.')
+    # print_error('НЕПРОХОДИТ ПОТОМУ ЧТО НУЖНЫ ОШИБКИ 201 И 203 (СМОТРИ В ДЕБАГЕ)')
+
+    # Подготавливаем список возможных ошибок.
+    switches = [('ChFlt', [204]), ('ModFlt', [206]), ('SensFlt', [208]),
+                ('ExtFlt', [210])]
+    work_modes_and_message = (('Imt1', [2, 108, 51, 20200]), ('Imt0', [3, 158, 51, 20300]),
+                              ('Fld', [4, 51, 20400]), ('Tst', [5, 51, 20500]))
+
+    # Перебираем все возможные комбинации от 1 до 4 одновременных ошибок.
+    for r in range(1, 5):
+        # В цикле перебираем возможные комбинации ошибок.
+        for combo_error in combinations(switches, r):
+
+            # Переходим в режим Oos на старте, выключаем ошибки.
+            not_error = turn_on_mode(mode='Oos')
+            for switch, _ in switches:
+                switch_position_for_legs(command=switch, required_bool_value=False)
+
+            #  Активируем эти ошибки, пробуем переключать режимы и проверяем меняются ли по st1 и PanelMode.
+            msg_all = []
+            errors = []
+            for error, msg_error in combo_error:
+                errors.append(error)
+                msg_all.extend(msg_error)
+                switch_position_for_legs(command=error, required_bool_value=True)
+            for mode, msg_mode in work_modes_and_message:
+                msg = msg_mode.copy()
+                if mode == 'Imt1' or mode == 'Imt0':
+                    st1_kvit_original = True
+                else:
+                    msg.extend(msg_all)
+                    st1_kvit_original = False
+                msg.sort()
+                old_messages = read_all_messages()
+                not_error = turn_on_mode(mode=mode)
+                new_messages = read_new_messages(old_messages=old_messages)
+                st1 = read_status1_one_bit(number_bit=STATUS1[mode])
+                PanelMode = read_PanelMode()
+                st1_kvit = read_status1_one_bit(number_bit=STATUS1['Kvitir'])
+                if PanelMode == PANELMODE[mode] and st1 is True and st1_kvit is st1_kvit_original and new_messages == msg:
+                    print_text_grey(f'Проверка включения режима {mode} при активных ошибках {errors} пройдена.')
+                else:
+                    not_error = False
+                    print_error(f'Ошибка при проверке включения {mode} при активных ошибках {errors}.')
+                    if st1 is False:
+                        print_error(f'  - в Status1 пришло {st1}, а ожидалось True.')
+                    if PanelMode != PANELMODE[mode]:
+                        print_error(f'  - в PanelMode пришло {PanelMode}, а ожидалось {PANELMODE[mode]}.')
+                    if new_messages != msg:
+                        print_error(f'  - Пришли следующие сообщения - {new_messages}, а ожидалось {msg}.')
+                    if st1_kvit is not st1_kvit_original:
+                        print_error(f'  - в Status1(Квитир.) пришло {st1_kvit}, а ожидалось True.')
+                not_error = turn_on_mode(mode='Oos')
+            print() if DETAIL_REPORT_ON is True else None
+    return not_error
+
 
 @reset_initial_values
 @writes_func_failed_or_passed
@@ -877,26 +939,27 @@ def main():
     '''
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    # checking_kvitir()
+    checking_kvitir()
 
     print('ОБЩИЕ ПРОВЕРКИ\n')
-    # checking_errors_writing_registers()
-    # cheking_on_off_for_cmdop()
-    # checking_generation_messages_and_msg_off()
-    # cheking_incorrect_command_cmdop()
-    # checking_operating_modes()
-    # checking_checking_signal_transfer_low_level_on_middle_level_and_invers()
-    # checking_the_installation_of_commands_from_different_control_panels()
-    # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
-    # checking_t01()
+    checking_errors_writing_registers()
+    cheking_on_off_for_cmdop()
+    checking_generation_messages_and_msg_off()
+    cheking_incorrect_command_cmdop()
+    checking_operating_modes()
+    checking_checking_signal_transfer_low_level_on_middle_level_and_invers()
+    checking_the_installation_of_commands_from_different_control_panels()
+    checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
+    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
+    checking_t01()
     checking_values_when_switching_modes()
+    checking_switching_between_modes_in_case_of_errors()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-    # checking_checking_imit1_and_imit0()
+    checking_checking_imit1_and_imit0()
 
     print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-    # checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
 
     
     # checking_()
