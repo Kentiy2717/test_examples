@@ -17,8 +17,6 @@ from common_read_and_write_functions import (
     this_is_write_error,
     write_coil,
     write_holding_register,
-    write_holding_registers,
-    read_holding_registers,
     read_float,
     write_holding_registers_int
 )
