@@ -533,9 +533,9 @@ def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_err
 
 @reset_initial_values
 @writes_func_failed_or_passed
-# Проверка задержки на срабатывание в режимах Fld, Tst, Imit.
+# Проверка задержки на срабатывание в режимах Fld, Tst, Imt0, Imt1, Imt2.
 def checking_t01(not_error):
-    print_title('Проверка задержки на срабатывание в режимах Fld, Tst, Imit.')
+    print_title('Проверка задержки на срабатывание в режимах Fld, Tst, Imt0, Imt1, Imt2.')
 
     # Включаем уставки. Провереяем, что квитирование не требуется.
     for command in ('WHLimEn', 'AHLimEn'):
@@ -561,38 +561,52 @@ def checking_t01(not_error):
             st1 = read_status1_one_bit(number_bit=number_bit)
             st1_kvitir = read_status1_one_bit(number_bit=number_bit_kvitir)
             if (st1 and st1_kvitir) is required_bool_value:
-                print_text_grey(f'Проверка несработки уставки при {msg}, через {sleep_time}сек при T01=1сек '
+                print_text_grey(f'Проверка {msg}, через {sleep_time}сек при T01=1сек '
                                 'прошла успешно.')
             else:
                 not_error = False
                 if st1 is not required_bool_value:
-                    print_error(f'Ошибка проверки несработки уставки при {msg}, через {sleep_time}сек при T01=1сек.\n'
-                                f'В Status1 в бите №{number_bit} - True, а ожидалось False.')
+                    print_error(f'Ошибка проверки {msg}, через {sleep_time}сек при T01=1сек.\n'
+                                f'В Status1 в бите №{number_bit} - {st1}, а ожидалось {required_bool_value}.')
                 elif st1_kvitir is not required_bool_value:
-                    print_error(f'Ошибка проверки несработки уставки при {msg}, через {sleep_time}сек '
-                                f'при T01 = 1сек.\nВ Status1 в бите №{number_bit_kvitir} - True, а ожидалось False.')
+                    print_error(f'Ошибка проверки {msg}, через {sleep_time}сек '
+                                f'при T01 = 1сек.\nВ Status1 в бите №{number_bit_kvitir} - {st1}, '
+                                f'а ожидалось {required_bool_value}.')
             return not_error
 
         # Если текущий режим из списка, то выставляем значение Input выше уставок.
         # Проверяем несработку уставки через 0,5 сек.
         if mode in ('Fld', 'Tst', 'Imt0'):
             write_holding_registers(address=INPUT_REGISTER, values=(START_VALUE['AHLim']['start_value'] + 1))
-        not_error = checking(sleep_time=0.5, msg='ее привышении', required_bool_value=False)
+        not_error = checking(
+            sleep_time=0.5,
+            msg='несработки уставки при ее превышении',
+            required_bool_value=False
+        )
 
         # Возвращаем значение АП в исходное положение и проверяем через 1,5 сек что уставка попрежнему не сработала.
         if mode in ('Fld', 'Tst', 'Imt0'):
             write_holding_registers(address=INPUT_REGISTER, values=START_VALUE['Input']['start_value'])
-            not_error = checking(sleep_time=1.0, msg='возвращении в исходное положение', required_bool_value=False)
+            required_bool_value = False
         else:
-            not_error = checking(sleep_time=1.0, msg='возвращении в исходное положение', required_bool_value=True)
+            required_bool_value = True
+        not_error = checking(
+            sleep_time=1.0,
+            msg='несработки уставки при возвращении в исходное положение',
+            required_bool_value=required_bool_value
+        )
 
         # Опять записываем значение превышающее уставку в регистр и проверяем сработку уставки через 1 сек.
         write_holding_registers(address=INPUT_REGISTER, values=(START_VALUE['AHLim']['start_value'] + 1))
         sleep(1)
         if mode == 'Imt0':
-            not_error = checking(sleep_time=1.0, msg='возвращении в исходное положение', required_bool_value=False)
+            required_bool_value = False
         else:
-            not_error = checking(sleep_time=1.0, msg='возвращении в исходное положение', required_bool_value=True)
+            required_bool_value = True
+        not_error = checking(
+            sleep_time=1.0,
+            msg='сработки уставки при ее превышении',
+            required_bool_value=required_bool_value)
 
         # Возвращаем в исходное положение значение АП и квитируем.
         write_holding_registers(address=INPUT_REGISTER, values=START_VALUE['Input']['start_value'])
@@ -620,7 +634,7 @@ def main():
     # checking_kvitir()
     # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
     # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
-    # checking_t01()
+    checking_t01()
 
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')

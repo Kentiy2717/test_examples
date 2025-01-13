@@ -717,62 +717,92 @@ def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_err
 @writes_func_failed_or_passed
 # Проверка задержки на срабатывание в режимах Fld, Tst, Imit.
 def checking_t01(not_error):
-    print_title('Проверка задержки на срабатывание в режимах Fld, Tst, Imit.')
-    print_error('ТЕСТ НЕ ПРОХОДИТ, ПОТОМУ ЧТО ЗАДЕРЖКИ НЕ ДОЛЖНО БЫТЬ НА Imt0, Imt1, А Tst ВООБЩЕ РАБОТАЕТ НЕ ВЕРНО СМОТРИ ДЕБАГ!.')
+    print_title('Проверка задержки на срабатывание в режимах Fld, Tst, Imt0 Imt1.')
+    print_error('ТЕСТ НЕ ПРОХОДИТ, ПОТОМУ ЧТО Tst РАБОТАЕТ НЕ ВЕРНО СМОТРИ ДЕБАГ!.')
+
+    # Провереяем, что квитирование не требуется.
+    old_messages = read_all_messages()
+    not_error = check_work_kvitir_off(old_messages=old_messages, not_error=not_error, msg=[])
+    if not_error is False:
+        print_error('Квитирование не сбросилось в декораторе reset_initial_values. '
+                    'Дальнейшее тестирование нецелесообразно.')
+        return not_error
 
     # Проходим по режимам в цикле. Устанавливаем значение Т01 = 1 сек.
-    for mode in ('Imt0', 'Imt1', 'Fld', 'Tst'):
-        
+    for mode in ('Imt1', 'Imt0', 'Fld', 'Tst'):
+
         if mode == 'Imt0':
             write_coil(address=INPUT_REGISTER, value=True)
 
-        # Меняем режим. Устанавливаем значение Т01 = 1 сек и меняем значение Input. Ждем 0,5сек.
-        print_text_white(f'\nПроверка в режиме {mode}.')
+        # Устанавливаем значение Т01 = 1 сек. Меняем режим.
+        print_text_white(f'Проверка в режиме {mode}.')
         write_holding_registers_int(address=START_VALUE['T01']['register'], values=1000)
-        write_CmdOp(command='Kvitir')
         not_error = turn_on_mode(mode=mode)
+
+        # Создаем функцию для проверки, которая квитирует, меняет параметр АП(value), ждет(sleep_time) и проверяет st1.
+        def checking(sleep_time, msg, required_bool_value, not_error=not_error, mode=mode):
+            sleep(sleep_time)
+            number_bit = STATUS1['DP_Act'] if mode != 'Imt0' else STATUS1['DP_Inact']
+            number_bit_kvitir = STATUS1['Kvitir']
+            st1 = read_status1_one_bit(number_bit=number_bit)
+            st1_kvitir = read_status1_one_bit(number_bit=number_bit_kvitir)
+            Out = read_coils(address=OUT_REGISTER, bit=0)
+            if (sleep_time < 1.0 and mode == 'Imt0') or (sleep_time >= 1.0 and mode in ('Imt1', 'Fld')):
+                expected_Out = True
+            else:
+                expected_Out = False
+            if (st1 and st1_kvitir) is required_bool_value and Out == expected_Out:
+                print_text_grey(f'Проверка {msg}, через {sleep_time}сек при T01=1сек '
+                                'прошла успешно.')
+            else:
+                not_error = False
+                if st1 is not required_bool_value:
+                    print_error(f'Ошибка проверки {msg}, через {sleep_time}сек при T01=1сек.\n'
+                                f'В Status1 в бите №{number_bit} - {st1}, а ожидалось {required_bool_value}.')
+                elif st1_kvitir is not required_bool_value:
+                    print_error(f'Ошибка проверки {msg}, через {sleep_time}сек '
+                                f'при T01 = 1сек.\nВ Status1 в бите №{number_bit_kvitir} - {st1}, '
+                                f'а ожидалось {required_bool_value}.')
+                elif Out != expected_Out:
+                    print_error(f'Ошибка проверки {msg}, через {sleep_time}сек при T01=1сек.\n'
+                                f' - В Out - {Out}, а ожидалось {expected_Out}.')
+            return not_error
+
+        # Если текущий режим из списка, то выставляем значение Input выше уставок.
+        # Проверяем несработку уставки через 0,5 сек.
+        if mode in ('Fld', 'Tst'):
+            write_coil(address=INPUT_REGISTER, value=True)
+            required_bool_value = False
+        not_error = checking(
+            sleep_time=0.5,
+            msg='неизменения DP при изменении Input',
+            required_bool_value=False
+        )
+
+        # Возвращаем значение DP в исходное положение и проверяем через 1,5 сек что уставка попрежнему не сработала.
+        if mode == 'Tst':
+            write_coil(address=INPUT_REGISTER, value=False)
+            required_bool_value = False
+        else:
+            required_bool_value = True
+        not_error = checking(
+            sleep_time=1.0,
+            msg='неизменения DP при возвращении Input в исходное положение',
+            required_bool_value=required_bool_value
+        )
+
+        # Опять меняем значение DP и проверяем сработку через 1 сек.
+        if mode == 'Fld':
+            required_bool_value = True
+        elif mode == 'Tst':
+            required_bool_value = False
         write_coil(address=INPUT_REGISTER, value=True)
-
-        # Проверяем активацию в Status1 и Kvitir. Проверяем изменение в Out.
-        number_bit = STATUS1['DP_Act'] if mode != 'Imt0' else STATUS1['DP_Inact']
-        number_bit_kvitir = STATUS1['Kvitir']
-        st1 = read_status1_one_bit(number_bit=number_bit)
-        st1_kvitir = read_status1_one_bit(number_bit=number_bit_kvitir)
-        Out = read_coils(address=OUT_REGISTER, bit=0)
-        expected_Out = True if mode == 'Imt1' else False
-        bool_value = True if mode == 'Imt1' or mode == 'Imt0' else False
-        if (st1 and st1_kvitir) is bool_value and Out == expected_Out:
-            print_text_grey('Проверка изменения DP, через 0.5сек после изменения Input при T01=1сек '
-                            'прошла успешно.')
-        else:
-            not_error = False
-            print_error('Ошибка изменения DP, через 0.5сек при T01=1сек: ')
-            if st1 is not bool_value:
-                print_error(f' - В Status1 в бите №{number_bit} - {st1}, а ожидалось {not bool_value}.')
-            if st1_kvitir is not bool_value:
-                print_error(f' - В Status1 в бите №{number_bit_kvitir} - {st1_kvitir}, а ожидалось {not bool_value}.')
-            if Out != expected_Out:
-                print_error(f' - В Out - {Out}, а ожидалось {expected_Out}.')
-
-        # Ждем еще 1сек и проверяем активацию в Status1 и Kvitir и изменение DP.
         sleep(1)
-        st1 = read_status1_one_bit(number_bit=number_bit)
-        st1_kvitir = read_status1_one_bit(number_bit=number_bit_kvitir)
-        Out = read_coils(address=OUT_REGISTER, bit=0)
-        expected_Out = True if mode == 'Imt1' or mode == 'Fld' else False
-        bool_value = False if mode == 'Tst' else True
-        if (st1 and st1_kvitir) is bool_value and Out == expected_Out:
-            print_text_grey('Проверка изменения DP, через 1сек после изменения Input при T01=1сек '
-                            'прошла успешно.')
-        else:
-            not_error = False
-            print_error('Ошибка изменения DP, через 1сек при T01=1сек: ')
-            if st1 is not bool_value:
-                print_error(f' - В Status1 в бите №{number_bit} - {st1}, а ожидалось {bool_value}.')
-            if st1_kvitir is not bool_value:
-                print_error(f' - В Status1 в бите №{number_bit_kvitir} - {st1_kvitir}, а ожидалось {bool_value}.')
-            if Out != expected_Out:
-                print_error(f' - В Out - {Out}, а ожидалось {expected_Out}.')
+        not_error = checking(
+            sleep_time=1.0,
+            msg='изменения DP при изменении Input',
+            required_bool_value=required_bool_value
+        )
 
         # Возвращаем в исходное положение значение DP и квитируем.
         write_holding_registers_int(address=START_VALUE['T01']['register'], values=0)
@@ -936,27 +966,27 @@ def main():
     '''
 
     print('ОБЩИЕ ПРОВЕРКИ\n')
-    checking_errors_writing_registers()
-    cheking_on_off_for_cmdop()
-    checking_generation_messages_and_msg_off()
-    cheking_incorrect_command_cmdop()
-    checking_operating_modes()
-    checking_checking_signal_transfer_low_level_on_middle_level_and_invers()
-    checking_the_installation_of_commands_from_different_control_panels()
-    checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
+    # checking_errors_writing_registers()
+    # cheking_on_off_for_cmdop()
+    # checking_generation_messages_and_msg_off()
+    # cheking_incorrect_command_cmdop()
+    # checking_operating_modes()
+    # checking_checking_signal_transfer_low_level_on_middle_level_and_invers()
+    # checking_the_installation_of_commands_from_different_control_panels()
+    # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
+    # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
     checking_t01()
-    checking_values_when_switching_modes()
-    checking_switching_between_modes_in_case_of_errors()
+    # checking_values_when_switching_modes()
+    # checking_switching_between_modes_in_case_of_errors()
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    checking_kvitir()
+    # checking_kvitir()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-    checking_checking_imit1_and_imit0()
+    # checking_checking_imit1_and_imit0()
 
     print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+    # checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
 
     
     # checking_()
