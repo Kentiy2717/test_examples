@@ -936,9 +936,6 @@ def main():
     Главная функция для запуска тестов ФБ АП.
     '''
 
-    print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    checking_kvitir()
-
     print('ОБЩИЕ ПРОВЕРКИ\n')
     checking_errors_writing_registers()
     cheking_on_off_for_cmdop()
@@ -952,6 +949,9 @@ def main():
     checking_t01()
     checking_values_when_switching_modes()
     checking_switching_between_modes_in_case_of_errors()
+
+    print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
+    checking_kvitir()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
     checking_checking_imit1_and_imit0()

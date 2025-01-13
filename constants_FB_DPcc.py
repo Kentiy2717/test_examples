@@ -1,36 +1,46 @@
 # Константы для test_FB_DPcc
 
-# НУЖНО ВСЕ ПРОВЕРИТЬ, КОГДА БУДЕТ АДРЕСАЦИЯ.
-
 START_VALUE = {
-    'Input':       {'register': 40111,  'start_value': False},
-    'ChFlt':       {'register': 40112,  'start_value': False},
-    'ModFlt':      {'register': 40113,  'start_value': False},
-    'SensFlt':     {'register': 40114,  'start_value': False},
-    'ExtFlt':      {'register': 40115,  'start_value': False},
-    'Period':      {'register': 40401,  'start_value': 100},
-    'T01':         {'register': 8000,   'start_value': 0},
-    'CmdOp':       {'register': 8001,   'start_value': 4},
+    'Input':      {'register': 40506,   'start_value': 12.0},
+    'DeltaV':     {'register': 18066,   'start_value': 0.0},
+    'Period':     {'register': 40403,   'start_value': 100},
+    'MaxEV':      {'register': 18058,   'start_value': 20.0},
+    'MinEV':      {'register': 18056,   'start_value': 4.0},
+    'T01':        {'register': 17654,   'start_value': 0},
+    'AHLim':      {'register': 18060,   'start_value': 90.0},
+    'WHLim':      {'register': 18062,   'start_value': 80.0},
+    'Hyst':       {'register': 18064,   'start_value': 0.5},
+    'Alarm_Off':  {'register': 40116,   'start_value': False},
+    'ChFlt':      {'register': 40117,   'start_value': False},
+    'ModFlt':     {'register': 40118,   'start_value': False},
+    'SensFlt':    {'register': 40119,   'start_value': False},
+    'ExtFlt':     {'register': 40120,   'start_value': False},
+    'WHLimEn':    {'register': 40121,   'start_value': False},
+    'AHLimEn':    {'register': 40122,   'start_value': False},
+    'CmdOp':      {'register': 17655,   'start_value': 4},
 }
 
 WORK_MODES = ('Oos', 'Imt2' 'Imt1', 'Imt0', 'Fld', 'Tst')
-SWITCH = ('FiltOff', 'MsgOff', 'WHLimEn', 'AHLimEn')
+SWITCH = ('MsgOff', 'WHLimEn', 'AHLimEn')
 INPUT_REGISTER = START_VALUE['Input']['register']
 CMDOP_REGISTER = START_VALUE['CmdOp']['register']
-OUT_REGISTER = 40013
-STATUS1_REGISTER = 7200
-STATUS2_REGISTER = 7202
-BAD_REGISTER = 40014
-OOS_REGISTER = 40015
-TST_REGISTER = 40016
-IMT1_REGISTER = 40017
-IMT0_REGISTER = 40018
-FLD_REGISTER = 40019
-IECINIT_REGISTER = 40020
-PANEL_MODE_REGISTER = 23274
-PANEL_STATE_REGISTER = 23275
-PANEL_ALM_REGISTER = 23276
-PANEL_SIG_REGISTER = 23277
+OUT_REGISTER = 18054
+STATUS1_REGISTER = 16854
+STATUS2_REGISTER = 16856
+BAD_REGISTER = 40021
+OOS_REGISTER = 40022
+TST_REGISTER = 40023
+IMT0_REGISTER = 40024
+IMT1_REGISTER = 40025
+IMT2_REGISTER = 40026
+FLD_REGISTER = 40027
+AH_ACT = 40029
+WH_ACT = 40030
+IECINIT_REGISTER = 40028
+PANEL_MODE_REGISTER = 27724
+PANEL_STATE_REGISTER = 27725
+PANEL_ALM_REGISTER = 27726
+PANEL_SIG_REGISTER = 27727
 
 # Команды управления (CmdOp)
 CMDOP = {
@@ -40,6 +50,7 @@ CMDOP = {
     'Fld':        4,    # Установить режим "Полевая обработка"
     'Tst':        5,    # Установить режим "Тестирование"
     'MsgOff':     20,   # Включить/Отключить Генерацию сообщений
+    'FiltOff':    21,   # Включить/Отключить Фильтр
     'WHLimEn':    26,	# Включить/Отключить Максимально предельный порог
     'AHLimEn':    27,	# Включить/Отключить Максимально аварийный порог
     'Imt2':       30,   # Установить режим "Имитация 2"
