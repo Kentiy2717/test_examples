@@ -13,7 +13,7 @@ def reset_CmdOp():
 
 @sleep_time_after_operation
 def write_CmdOp(
-    command: Literal['Oos', 'Imt2', 'Imt1', 'Imt0', 'Fld', 'Tst', 'MsgOff', 'WHLimEn', 'AHLimEn' 'Kvitir']
+    command: Literal['Oos', 'Imt2', 'Imt1', 'Imt0', 'Fld', 'Tst', 'MsgOff', 'WHLimEn', 'AHLimEn', 'Kvitir']
 ):
     '''Обнуляет CmdOp, а потом записывает значение переданнов в command.'''
 

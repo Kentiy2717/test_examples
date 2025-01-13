@@ -111,7 +111,7 @@ def cheking_on_off_for_cmdop(not_error):
 # Проверка включения и отключения режима генерации сообщений (командой на CmdOp).
 def checking_generation_messages_and_msg_off(not_error):
     print_title('Проверка включения и отключения режима генерации сообщений (командой на CmdOp).')
-    print_error('ОШИБКА ПО ПРЕЧИНЕ ТОГО, ЧТО БАГ. СООБЩЕНИЯ НЕ ДОЛЖНЫ ФОРМИРОАТЬСЯ.')
+    print_error('ОШИБКА ПО ПРИЧИНЕ ТОГО, ЧТО БАГ. СООБЩЕНИЯ НЕ ДОЛЖНЫ ФОРМИРОАТЬСЯ.')
 
     # Убеждаемся, что генерация сообщений отключена.
     switch_position(command='MsgOff', required_bool_value=False)

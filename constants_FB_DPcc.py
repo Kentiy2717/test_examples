@@ -1,14 +1,14 @@
 # Константы для test_FB_DPcc
 
 START_VALUE = {
-    'Input':      {'register': 40506,   'start_value': 12.0},
+    'Input':      {'register': 40506,   'start_value': 5.0},
     'DeltaV':     {'register': 18066,   'start_value': 0.0},
     'Period':     {'register': 40403,   'start_value': 100},
     'MaxEV':      {'register': 18058,   'start_value': 20.0},
     'MinEV':      {'register': 18056,   'start_value': 4.0},
     'T01':        {'register': 17654,   'start_value': 0},
-    'AHLim':      {'register': 18060,   'start_value': 90.0},
-    'WHLim':      {'register': 18062,   'start_value': 80.0},
+    'AHLim':      {'register': 18060,   'start_value': 15.0},
+    'WHLim':      {'register': 18062,   'start_value': 10.0},
     'Hyst':       {'register': 18064,   'start_value': 0.5},
     'Alarm_Off':  {'register': 40116,   'start_value': False},
     'ChFlt':      {'register': 40117,   'start_value': False},
@@ -20,7 +20,7 @@ START_VALUE = {
     'CmdOp':      {'register': 17655,   'start_value': 4},
 }
 
-WORK_MODES = ('Oos', 'Imt2' 'Imt1', 'Imt0', 'Fld', 'Tst')
+WORK_MODES = ('Oos', 'Imt2', 'Imt1', 'Imt0', 'Fld', 'Tst')
 SWITCH = ('MsgOff', 'WHLimEn', 'AHLimEn')
 INPUT_REGISTER = START_VALUE['Input']['register']
 CMDOP_REGISTER = START_VALUE['CmdOp']['register']
@@ -60,8 +60,8 @@ CMDOP = {
 # Статус слово 1 (Status1)
 STATUS1 = {
     'Oos':        1,    # Включен режим "Маскирование"
-    'Imt1':       2,    # Включен режим "Имитация 1"
-    'Imt0':       3,    # Включен режим "Имитация 0"
+    'Imt1':       3,    # Включен режим "Имитация 1"
+    'Imt0':       2,    # Включен режим "Имитация 0"
     'Fld':        4,    # Включен режим "Полевая обработка"
     'Tst':        5,    # Включен режим "Тестирование"
     'DP_Oos':     6,    # Состояние "Замаскирован"
