@@ -1,7 +1,7 @@
 from typing import Literal
 
 from common_read_and_write_functions import this_is_write_error, write_holding_register
-from constants_FB_DPcc import CMDOP, CMDOP_REGISTER, PANELSIG, STATUS1
+from constants_FB_DPcc import CMDOP, CMDOP_REGISTER, PANELSIG, START_VALUE, STATUS1
 from func_print_console_and_write_file import print_error, print_text_grey
 from read_and_write_functions_FB_DPcc import reset_CmdOp, write_CmdOp
 from read_messages import read_new_messages
@@ -89,3 +89,13 @@ def check_work_kvitir_off(old_messages, not_error, msg):
         if new_msg != []:
             print_error(f'Ошибка в сообщениях пришло {new_msg}, а ожидалось {msg}')
     return not_error
+
+
+def switch_position_for_legs(required_bool_value: Literal[True, False],
+                             command: Literal['ChFlt', 'ModFlt', 'SensFlt', 'ExtFlt']):
+    # Зиписываем в цикле на нужную ножку значение 3 раза попеременно меняя его.
+    # Это связано с особенностями перезаписи этих ножек после ребута ПЛК.
+    for _ in range(0, 3):
+        if this_is_write_error(address=START_VALUE[command]['register'], value=required_bool_value) is True:
+            print_error(f'Ошибка записи на ножку {command}')
+        required_bool_value = not required_bool_value

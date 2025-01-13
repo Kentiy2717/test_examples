@@ -1691,10 +1691,10 @@ def checking_t01(not_error):
         else:
             not_error = False
             if st1 is False:
-                print_error(f'Ошибка проверки сработки уставки при ее привышении, через 0,5сек при T01=1сек.\n'
+                print_error(f'Ошибка проверки сработки уставки при ее привышении, через 1сек при T01=1сек.\n'
                             f'В Status1 в бите №{number_bit} - False, а ожидалось True.')
             elif st1_kvitir is True:
-                print_error(f'Ошибка проверки сработки уставки при ее привышении, через 0,5сек при T01 = 1сек.\n'
+                print_error(f'Ошибка проверки сработки уставки при ее привышении, через 1сек при T01 = 1сек.\n'
                             f'В Status1 в бите №{number_bit_kvitir} - False, а ожидалось True.')
 
         # Возвращаем в исходное положение значение АП и квитируем.
@@ -1735,7 +1735,7 @@ def main():
     # checking_DeltaV()
     # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
     # checking_SpeedLim()
-    # checking_t01()
+    checking_t01()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
     # checking_simulation_mode_turn_on()

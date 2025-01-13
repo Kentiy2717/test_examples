@@ -713,7 +713,6 @@ def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_err
     return not_error
 
 
-
 @reset_initial_values
 @writes_func_failed_or_passed
 # Проверка задержки на срабатывание в режимах Fld, Tst, Imit.
