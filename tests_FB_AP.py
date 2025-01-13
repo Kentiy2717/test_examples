@@ -258,8 +258,9 @@ def cheсking_on_off_AlarmOff(not_error):  # Готово. Возможно тр
     st1 = read_status1_one_bit(number_bit=14)
     new_messages = read_new_messages(old_messages)
 
-    # Если значение PanelState=9, st1=True или сообщениях сработала уставка(114), то проверка прошла успешно.    if PanelState == 9 and st1 is True and 114 in new_messages:
-    print_text_grey('AlarmOff работает.')
+    # Если значение PanelState=9, st1=True или сообщениях сработала уставка(114), то проверка прошла успешно.
+    if PanelState == 9 and st1 is True and 114 in new_messages:
+        print_text_grey('AlarmOff работает.')
     return not_error
 
 
@@ -394,23 +395,25 @@ def checking_not_impossible_min_ev_more_max_ev(not_error):  # Готово.
     print_title('Проверка невозможности записи minEV > maxEV.')
 
     # Создаем вспомогательные переменные со значениями для записи, где minEV > maxEV.
-    maxEV_list = [-9999.9, -100.1, -12.0,  -4.0,  11.95,  -555.67,  9876.123,  0.0]
-    minEV_list = [9999.99,  -90.1,  0.0,    4.0,  21.95,   555.67,  9976.123,  100.0]
+    maxEV_values = (-9999.9, -100.1, -12.0,  -4.0,  11.95,  -555.67,  9876.123,  0.0)
+    minEV_values = (9999.99,  -90.1,  0.0,    4.0,  21.95,   555.67,  9976.123,  100.0)
+    maxEV_register = START_VALUE['MaxEV']['register']
+    minEV_register = START_VALUE['MinEV']['register']
 
     # Записываем поочередно значения в регистры для minEV и maxEV.
-    for i in range(0, len(minEV_list)):
-        this_is_write_error(address=MINEV_REGISTER, value=minEV_list[i])
-        error_maxEV = this_is_write_error(address=MAXEV_REGISTER, value=maxEV_list[i])
+    for value in range(0, len(maxEV_values)):
+        this_is_write_error(address=minEV_register, value=minEV_values[value])
+        error_maxEV = this_is_write_error(address=maxEV_register, value=maxEV_values[value])
 
         # Считываем значения minEV и maxEV с регистров.
-        minEV = round(decode_float(read_holding_registers(address=MINEV_REGISTER, count=2)), 3)
-        maxEV = round(decode_float(read_holding_registers(address=MAXEV_REGISTER, count=2)), 3)
+        minEV = round(read_float(address=minEV_register), 3)
+        maxEV = round(read_float(address=maxEV_register), 3)
 
         # Если minEV и maxEV записались кореектно (сравниваем с эталонными из списков), то проверка пройдена.
-        if minEV == minEV_list[i] and maxEV == maxEV_list[i] and minEV > maxEV:
+        if minEV == minEV_values[value] and maxEV == maxEV_values[value] and minEV > maxEV:
             print_error(
-                f'Ошибочная запись значений! MIN значение({minEV_list[i]}) '
-                f'не может быть больше чем MAX({maxEV_list[i]}).'
+                f'Ошибочная запись значений! MIN значение({minEV_values[value]}) '
+                f'не может быть больше чем MAX({maxEV_values[value]}).'
             )
             not_error = False
         elif minEV < maxEV and error_maxEV is True:
@@ -542,6 +545,23 @@ def checking_messages_on_off_setpoints(not_error):  # Готово.
         'AHLimEn': {'st1': 27, 'msg_on': [27, 22700], 'msg_off': [77, 22700]},
     }
 
+    # Создаем функцию для проверки.
+    def check_setpoint_on_off(msg, required_bool_value, not_error=not_error):
+
+        # Проверяем что уставка включена по status1 и новые сообщения на соответствие ожидаемым.
+        st1 = read_status1_one_bit(number_bit=bit)
+        new_messages = read_new_messages(old_message)
+        expected_msg = msg_on if required_bool_value is True else msg_off
+        if st1 is required_bool_value and new_messages == expected_msg:
+            print_text_grey(f'Проверка {msg} {name} прошла успешно.')
+        else:
+            not_error = False
+            if new_messages != expected_msg:
+                print_error(f'Проверка {msg} провалена. Получили {new_messages}, а ожидалось {expected_msg}')
+            if st1 is not required_bool_value:
+                print_error(f'Неизвестая ошибка {msg}. st1={st1}(должен быть True).')
+        return not_error
+
     # Проходимся циклом по словарю. И запоминаем нужные переменные.
     for name, param in data.items():
         msg_on = param['msg_on']
@@ -549,38 +569,16 @@ def checking_messages_on_off_setpoints(not_error):  # Готово.
         bit = param['st1']
 
         # ПРОВЕРКА ВКЛЮЧЕНИЯ УСТАВКИ.
-        # Читаем сообщения, включаем уставку.
+        # Читаем сообщения, включаем уставку. Вызываем функцию проверки с параметрами.
         old_message = read_all_messages()
         switch_position(command=name, required_bool_value=True)
-
-        # Проверяем что уставка включена по status1 и новые сообщения на соответствие ожидаемым.
-        st1 = read_status1_one_bit(number_bit=bit)
-        new_messages = read_new_messages(old_message)
-        if st1 is True and new_messages == msg_on:
-            print_text_grey(f'Проверка включиния {name} прошла успешно.')
-        elif st1 is True and new_messages != msg_on:
-            print_error(f'Проверка включиния провалена. Получили {new_messages}, а ожидалось {msg_on}')
-            not_error = False
-        else:
-            print_error(f'Неизвестая ошибка включения. st1={st1}(должен быть True).')
-            not_error = False
+        not_error = check_setpoint_on_off(msg='включиния', required_bool_value=True)
 
         # ПРОВЕРКА ОТКЛЮЧЕНИЯ УСТАВКИ.
-        # Читаем сообщения, отключаем уставку.
+        # Читаем сообщения, отключаем уставку. Вызываем функцию проверки с параметрами.
         old_message = read_all_messages()
         switch_position(command=name, required_bool_value=False)
-
-        # Проверяем что уставка включена по status1 и новые сообщения на соответствие ожидаемым.
-        st1 = read_status1_one_bit(number_bit=bit)
-        new_messages = read_new_messages(old_message)
-        if st1 is False and new_messages == msg_off:
-            print_text_grey(f'Проверка отключения {name} прошла успешно.')
-        elif st1 is False and new_messages != msg_off:
-            print_error(f'Проверка отключения провалена. Получили {new_messages}, а ожидалось {msg_off}')
-            not_error = False
-        else:
-            print_error(f'Неизвестая ошибка отключения. st1={st1}(должен быть False).')
-            not_error = False
+        not_error = check_setpoint_on_off(msg='отключения', required_bool_value=False)
     return not_error
 
 
@@ -593,7 +591,7 @@ def checking_setpoint_values(not_error):  # Готово.
     # необходимо считать соответствующие регисты и сравнить исходные данные со считанными.
 
     # Проходим циклом по списку с названиями уставок. Записываем в переменные эталонное значение и считанное.
-    for name in ['AHLim', 'WHLim', 'THLim', 'TLLim', 'WLLim', 'ALLim']:
+    for name in ('AHLim', 'WHLim', 'THLim', 'TLLim', 'WLLim', 'ALLim'):
         val = START_VALUE[name]['start_value']
         read_val = read_float(address=START_VALUE[name]['register'])
 
@@ -628,7 +626,7 @@ def checking_DeltaV(not_error):  # Готово.
         Out1 = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
         Input = decode_float(read_holding_registers(address=LEGS['Input']['register'], count=2))
         write_holding_registers(address=LEGS['Input']['register'], values=(Input + 1))
-        Out = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
+        Out = read_float(address=OUT_REGISTER)
         DeltaV = Out - Out1
         write_holding_registers(address=LEGS['DeltaV']['register'], values=DeltaV)
 
@@ -642,11 +640,13 @@ def checking_DeltaV(not_error):  # Готово.
         # Подаем значения в пределах DeltaV (Input +-1 на нижнем уровне).
         for value in [0.5, -0.5, 1, -1, 0]:
             write_holding_registers(address=LEGS['Input']['register'], values=(Input + value))
-            # Cмотрим, что значение в Out изменилось.
-            if Out != decode_float(read_holding_registers(address=OUT_REGISTER, count=2)) and not_error is False:
-                print_error('DeltaV работает не верно при изменении значения Out меньше чем DeltaV')
+
+            # Cмотрим, что значение в Out не изменилось.
+            if read_float(address=OUT_REGISTER) == Out:
+                print_text_grey('DeltaV работает верно при изменении значения Out меньше чем DeltaV')
+            else:
+                print_error(f'DeltaV работает не верно при изменении значения на {value} Out меньше чем DeltaV')
                 not_error = False
-        print_text_grey('DeltaV работает верно при изменении значения Out меньше чем DeltaV')
 
         # Подаем значения больше DeltaV(Input +- > 1 на нижнем уровне).
         for value in [1.001, -1.001]:
@@ -1732,10 +1732,10 @@ def main():
     # checking_work_setpoint()
     # checking_working_setpoint_with_large_jump()
     # checking_switching_between_modes_in_case_of_errors()
-    # checking_DeltaV()
+    checking_DeltaV()
     # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
     # checking_SpeedLim()
-    checking_t01()
+    # checking_t01()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
     # checking_simulation_mode_turn_on()

@@ -240,7 +240,7 @@ def checking_operating_modes(not_error):
 @reset_initial_values
 @writes_func_failed_or_passed
 # Проверка прохождения сигнала с нижнего уровня на средний с инверсией и без на разных режимах.
-def checking_checking_signal_transfer_low_level_on_middle_level_and_invers(not_error):
+def checking_signal_transfer_low_level_on_middle_level_and_invers(not_error):
     print_title('Проверка прохождения сигнала с нижнего уровня на средний, генерации сообщений и статусов'
                 ' при переключении между режимами и включения инверсии.')
 
@@ -901,7 +901,7 @@ def checking_values_when_switching_modes(not_error):
 
                 # Если они совпадают, то не проводим проверку.
                 if mode1 == mode2:
-                    break
+                    continue
 
                 # Включаем режим переданный в параметре "mode1".
                 not_error = turn_on_mode(mode=mode1)
@@ -971,12 +971,12 @@ def main():
     # checking_generation_messages_and_msg_off()
     # cheking_incorrect_command_cmdop()
     # checking_operating_modes()
-    # checking_checking_signal_transfer_low_level_on_middle_level_and_invers()
+    # checking_signal_transfer_low_level_on_middle_level_and_invers()
     # checking_the_installation_of_commands_from_different_control_panels()
     # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
     # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
-    checking_t01()
-    # checking_values_when_switching_modes()
+    # checking_t01()
+    checking_values_when_switching_modes()
     # checking_switching_between_modes_in_case_of_errors()
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')

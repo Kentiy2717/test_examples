@@ -10,7 +10,7 @@ START_VALUE = {
     'AHLim':      {'register': 18060,   'start_value': 15.0},
     'WHLim':      {'register': 18062,   'start_value': 10.0},
     'Hyst':       {'register': 18064,   'start_value': 0.5},
-    'Alarm_Off':  {'register': 40116,   'start_value': False},
+    'AlarmOff':   {'register': 40116,   'start_value': False},
     'ChFlt':      {'register': 40117,   'start_value': False},
     'ModFlt':     {'register': 40118,   'start_value': False},
     'SensFlt':    {'register': 40119,   'start_value': False},

@@ -1,6 +1,7 @@
+from itertools import combinations
 from time import sleep
 from assist_function_FB_DPcc import check_work_kvitir_off, check_work_kvitir_on, switch_position, switch_position_for_legs, turn_on_mode
-from constants_FB_DPcc import BAD_REGISTER, CMDOP, CMDOP_REGISTER, INPUT_REGISTER, OUT_REGISTER, PANELSIG, PANELSTATE, START_VALUE, STATUS1, STATUS2, SWITCH, VALUE_UNRELIABILITY
+from constants_FB_DPcc import BAD_REGISTER, CMDOP, CMDOP_REGISTER, INPUT_REGISTER, OUT_REGISTER, PANELMODE, PANELSIG, PANELSTATE, START_VALUE, STATUS1, STATUS2, SWITCH, VALUE_UNRELIABILITY, WORK_MODES
 from probably_not_used.constants import DETAIL_REPORT_ON
 from func_print_console_and_write_file import (
     print_text_white,
@@ -614,6 +615,469 @@ def checking_t01(not_error):
     return not_error
 
 
+@reset_initial_values
+@writes_func_failed_or_passed
+# Проверка неизменности значений Period, T01,
+# а также сохранения положения переключателей (MsgOff, Invers) при переключениях между режимами.
+def checking_values_when_switching_modes(not_error):
+    print_title('Проверка неизменности значений DeltaV, Period, MaxEV, MinEV, T01, AHLim, WHLim, Hyst, а также \n'
+                'сохранения положения переключателей (MsgOff, WHLimEn, AHLimEn) при переключениях между режимами.')
+
+    # Создаем переменную с кортежем из всех параметров для проверки.
+    params_for_check = ('DeltaV', 'Period', 'MaxEV', 'MinEV', 'T01', 'AHLim', 'WHLim', 'Hyst')
+
+    # Создаем вспомогательную функцию для формирования словаря значений параметров и переключателей.
+    def get_checklist():
+        checklist = [(param, read_float(address=START_VALUE[param]['register'])) for param in params_for_check]
+        checklist.extend(
+            [(name, read_status1_one_bit(number_bit=STATUS1[name])) for name in SWITCH]
+        )
+        return checklist
+
+    # Создаем вспомогательную функцию для проверки.
+    def base_check(not_error):
+
+        # Проходим двойным циклом по кортежу с командами для переключения в разные режимы.
+        for mode1 in ('Fld', 'Tst', 'Oos', 'Imt2', 'Imt1', 'Imt0'):
+            for mode2 in ('Fld', 'Tst', 'Oos', 'Imt2', 'Imt1', 'Imt0'):
+
+                # Если они совпадают, то не проводим проверку.
+                if mode1 == mode2:
+                    continue
+
+                # Включаем режим переданный в параметре "mode1".
+                not_error = turn_on_mode(mode=mode1)
+
+                # Создаем список для записи всех значений параметров и переключателей в режиме mode1.
+                checklist_before = get_checklist()
+
+                # Включаем режим "mode2". Сравниваем checklist_before со списком, полученным после переключения режима.
+                not_error = turn_on_mode(mode=mode2)
+                checklist_after = get_checklist()
+                if checklist_before == checklist_after:
+                    print_text_grey(f'Проверка переключения с {mode1} на {mode2} прошла успешно.')
+                else:
+                    not_error = False
+
+                    # Выводим сообщение об ошибке со списком изменившихся параметров и переключателей.
+                    print_error('Ошибка! Следующие параметры отличаются:')
+                    for i in range(len(checklist_after)):
+                        if checklist_before[i] != checklist_after[i]:
+                            print_error(f'  - {checklist_before[i][0]}: до - '
+                                        f'{checklist_before[i][1]}, после - {checklist_after[i][1]}')
+        return not_error
+
+    # Проводим проверку с выключателями в положении False.
+    print_text_white('Старт проверки с пеерключателями в положении False.')
+    not_error = base_check(not_error=not_error)
+
+    # Выставляем все переключатели в положение True. Проводим проверку повторно.
+    for command in SWITCH:
+        switch_position(command=command, required_bool_value=True)
+    print_text_white('Старт проверки с пеерключателями в положении True.')
+    not_error = base_check(not_error=not_error)
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+# Проверка прохождения сигнала с нижнего уровня на средний
+# (что подали в Input то получили в Output, т.к. пересчета нет).
+def checking_signal_transfer_low_level_on_middle_level(not_error):
+    print_title('Проверка прохождения сигнала с нижнего уровня на средний '
+                '(что подали в Input то получили в Output, т.к. пересчета нет).')
+
+    # Создаем кортеж для проверки. Расчитываем ожидаемые значения в Out для режимов "Имитация".
+    values_for_write = (4, 4.5, 9.9, 14.8, 18.5)
+    Out_for_Imit0 = START_VALUE['WHLim']['start_value'] - START_VALUE['Hyst']['start_value']
+    Out_for_Imit1 = START_VALUE['AHLim']['start_value'] - START_VALUE['Hyst']['start_value']
+    Out_for_Imit2 = START_VALUE['AHLim']['start_value'] + START_VALUE['Hyst']['start_value']
+
+    # Проходим циклом по всем режимам. Активируем режим и проводим проверку.
+    for mode in WORK_MODES:
+        not_error = turn_on_mode(mode=mode)
+
+        # Проходим циклом по кортежу со значениями для записи в Input.
+        # Записываем значение в Input и смотрим, что в Out значение изменилось на записываемое.
+        for value in values_for_write:
+            write_holding_registers(address=INPUT_REGISTER, values=value)
+
+        # Считываем значение в Out. Подготавливаем переменную с ожидаемым значением Out в зависимости от режима.
+        Out = read_float(address=OUT_REGISTER)
+        if mode == 'Imt0':
+            expected_Out = Out_for_Imit0
+        elif mode == 'Imt1':
+            expected_Out = Out_for_Imit1
+        elif mode == 'Imt2':
+            expected_Out = Out_for_Imit2
+        else:
+            expected_Out = value
+
+        # Проводим сравнение ожидаемого результата и реального значения в Out.
+        if Out == expected_Out and mode in ('Imt2', 'Imt1', 'Imt0'):
+            print_text_grey(f'Сигнал с НУ не прошел на СУ в режиме {mode}. В Out ожидаемый результат.')
+        elif Out == expected_Out:
+            print_text_grey(f'Сигнал с НУ прошел на СУ в режиме {mode} без изменений. В Out ожидаемый результат.')
+        else:
+            not_error = False
+            print_error(f'Ошибка в режиме {mode}. Out={Out}, а должен быть {expected_Out}.')
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+def checking_switching_between_modes_in_case_of_errors(not_error):
+    print_title('Проверка возможности перехода из режима "Маскирование" в другие режимы при неисправностях \n'
+                'канала, модуля, сенсора,внешней ошибки и выхода за пределы границ измерений.')
+    print_error('НЕПРОХОДИТ ПОТОМУ ЧТО НУЖНЫ ОШИБКИ 201 И 203 (СМОТРИ В ДЕБАГЕ)')
+    print_error('НЕПРОХОДИТ ExtFlt!!!! Нужно спросить у Алексея! Скорее всего неправильно формируется сообщение.')
+
+    # Подготавливаем список возможных ошибок.
+    switches = [('ChFlt', [204]), ('ModFlt', [206]), ('SensFlt', [208]),
+                ('ExtFlt', [210]), ('HightErr', [201]), ('LowErr', [203])]
+    work_modes_and_message = (('Imt2', [30, 51, 23000]), ('Imt1', [3, 51, 20300]), ('Imt0', [2, 51, 20200]),
+                              ('Fld', [4, 51, 20400]), ('Tst', [5, 51, 20500]))
+
+    # Перебираем все возможные комбинации от 1 до 5 одновременных ошибок.
+    for r in range(1, 6):
+        # В цикле перебираем возможные комбинации ошибок.
+        for combo_error in combinations(switches, r):
+            # Пропускаем комбинацию, где одновременно срабатывает выход за верх и низ инженерных величин.
+            if ('HightErr', [200]) in combo_error and ('LowErr', [202]) in combo_error:
+                continue
+
+            # Переходим в режим Oos на старте, приводим Input в рабочий диапазон и выключаем ошибки.
+            not_error = turn_on_mode(mode='Oos')
+            write_holding_registers(address=INPUT_REGISTER, values=START_VALUE['Input']['start_value'])
+            for switch, _ in switches[:4]:
+                switch_position_for_legs(command=switch, required_bool_value=False)
+
+            #  Активируем эти ошибки, пробуем переключать режимы и проверяем меняются ли по st1 и PanelMode.
+            msg_all = []
+            errors = []
+            for error, msg_error in combo_error:
+                errors.append(error)
+                msg_all.extend(msg_error)
+                if error == 'HightErr':
+                    write_holding_registers(address=INPUT_REGISTER, values=(2 * START_VALUE['MaxEV']['start_value']))
+                elif error == 'LowErr':
+                    write_holding_registers(address=INPUT_REGISTER, values=(-2 * START_VALUE['MinEV']['start_value']))
+                else:
+                    switch_position_for_legs(command=error, required_bool_value=True)
+            for mode, msg_mode in work_modes_and_message:
+                msg = msg_mode.copy()
+                if mode in ('Imt0', 'Imt1', 'Imt2') and error in ('LowErr', 'HightErr'):
+                    st1_kvit_original = False
+                elif mode == 'Fld' or mode == 'Tst':
+                    msg.extend(msg_all)
+                    msg.extend([212])
+                    st1_kvit_original = True
+                else:
+                    st1_kvit_original = False
+                msg.sort()
+                old_messages = read_all_messages()
+                not_error = turn_on_mode(mode=mode)
+                new_messages = read_new_messages(old_messages=old_messages)
+                st1 = read_status1_one_bit(number_bit=STATUS1[mode])
+                PanelMode = read_PanelMode()
+                st1_kvit = read_status1_one_bit(number_bit=STATUS1['Kvitir'])
+                if PanelMode == PANELMODE[mode] and st1 is True and st1_kvit is st1_kvit_original and new_messages == msg:
+                    print_text_grey(f'Проверка включения режима {mode} при активных ошибках {errors} пройдена.')
+                else:
+                    not_error = False
+                    print_error(f'Ошибка при проверке включения {mode} при активных ошибках {errors}.')
+                    if st1 is False:
+                        print_error(f'  - в Status1 пришло {st1}, а ожидалось True.')
+                    if PanelMode != PANELMODE[mode]:
+                        print_error(f'  - в PanelMode пришло {PanelMode}, а ожидалось {PANELMODE[mode]}.')
+                    if new_messages != msg:
+                        print_error(f'  - Пришли следующие сообщения - {new_messages}, а ожидалось {msg}.')
+                    if st1_kvit is not st1_kvit_original:
+                        print_error(f'  - в Status1(Квитир.) пришло {st1_kvit}, а ожидалось True.')
+                not_error = turn_on_mode(mode='Oos')
+            print() if DETAIL_REPORT_ON is True else None
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+# Проверка корректности значений в режимах "Имитация2", "Имитация1", "Имитация0".
+def checking_imit2_imit1_and_imit0(not_error):  # .
+    print_title('Проверка корректности значений в режимах "Имитация2", "Имитация1", "Имитация0".')    
+
+    #  Расчитываем ожидаемые значения в Out для режимов "Имитация2", "Имитация1", "Имитация0".
+    Out_for_Imit0 = START_VALUE['WHLim']['start_value'] - START_VALUE['Hyst']['start_value']
+    Out_for_Imit1 = START_VALUE['AHLim']['start_value'] - START_VALUE['Hyst']['start_value']
+    Out_for_Imit2 = START_VALUE['AHLim']['start_value'] + START_VALUE['Hyst']['start_value']
+
+    # Проходим циклом по всем режимам. Активируем режим и проводим проверку.
+    for mode in ('Imt0', 'Imt1', 'Imt2'):
+        not_error = turn_on_mode(mode=mode)
+        print_text_white(f'Проверка в режиме {mode}:')
+
+        # Считываем значение в Out. Подготавливаем переменную с ожидаемым значением Out в зависимости от режима.
+        Out = read_float(address=OUT_REGISTER)
+        if mode == 'Imt0':
+            expected_Out = Out_for_Imit0
+        elif mode == 'Imt1':
+            expected_Out = Out_for_Imit1
+        elif mode == 'Imt2':
+            expected_Out = Out_for_Imit2
+
+        # Проводим сравнение ожидаемого результата и реального значения в Out.
+        if Out == expected_Out:
+            print_text_grey(f'Проверка кореектности значения при переходе в режим {mode} пройдена.'
+                            ' В Out ожидаемый результат.')
+        else:
+            not_error = False
+            print_error(f'Ошибка в режиме {mode}. Out={Out}, а должен быть {expected_Out}.')
+
+        # Возвращаемся из режима mode в режим из кортежа и проверяем вернулось ли значение в Out на изначальное.
+        for mode1 in ('Oos', 'Fld', 'Tst'):
+            not_error = turn_on_mode(mode=mode1)
+            expected_Out = read_float(address=INPUT_REGISTER)
+            Out = read_float(address=OUT_REGISTER)
+            if Out == expected_Out:
+                print_text_grey(f'Проверка корректного возвращений значения Out при переходе в режим {mode1} пройдена.')
+            else:
+                not_error = False
+                print_error(f'Ошибка при переходе в режим {mode1}. Out={Out}, а должен быть {expected_Out}.')
+            not_error = turn_on_mode(mode=mode)
+
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+def cheсking_on_off_AlarmOff(not_error):  # Готово. Возможно требует доработки проверки на все уставки, а не на одну.
+    print_title('Проверка работоспособности AlarmOff.')
+
+    # Переключаем AlarmOff=True и включаем верхнюю уставку. Читаем сообщения.
+    switch_position_for_legs(command='AlarmOff', required_bool_value=True)
+    switch_position(command='AHLimEn', required_bool_value=True)
+    old_messages = read_all_messages()
+
+    # Устанавливаем значение в Input так, чтобы Out > AHLim и записываем его на ножку Input.
+    write_holding_registers(address=INPUT_REGISTER,
+                            values=(START_VALUE['AHLim']['start_value'] + START_VALUE['Hyst']['start_value']))
+
+    # Читаем значения PanelState, значение 14 бита статус1 и проверяем сообщения.
+    PanelState = read_PanelState()
+    st1 = read_status1_one_bit(number_bit=STATUS1['AHAct'])
+    new_messages = read_new_messages(old_messages)
+
+    # Если значение Out > AHLim, в PanelState=9, st1=True или сообщениях сработала уставка(114), то ошибка.
+    if PanelState == PANELSTATE['OutNorm'] and st1 is False and new_messages == []:
+        print_text_grey('Проверка работоспособности AlarmOff прошла успешно.')
+    else:
+        not_error = False
+        if PanelState == PANELSTATE['AHAct']:
+            print_error('AlarmOff не работает. При Out > AHLim уставка сработала в PanelState.')            
+        if st1 is True:
+            print_error('AlarmOff не работает. При Out > AHLim значение Status1 - True')
+        if new_messages != []:
+            print_error(f'AlarmOff не работает. При Out > AHLim появились новые сообщения - {new_messages}')
+
+    # Читаем сообщения. Переключаем AlarmOff=False.
+    old_messages = read_all_messages()
+    switch_position_for_legs(command='AlarmOff', required_bool_value=False)
+
+    #  Читаем значения PanelState, значение 14 бита статус1 и проверяем сообщения.
+    PanelState = read_PanelState()
+    st1 = read_status1_one_bit(number_bit=STATUS1['AHAct'])
+    new_messages = read_new_messages(old_messages)
+
+    # Проверяем корректность формирования статусов и сообщений после отключения AlarmOff.
+    if PanelState == PANELSTATE['AHAct'] and st1 is True and 114 in new_messages:
+        print_text_grey('После оключения AlarmOff PanelState, Status1 и сообщения формируются корректно.')
+    else:
+        not_error = False
+        print_error('Ошибка после включения AlarmOff!')
+        if PanelState != PANELSTATE['AHAct']:
+            print_error(f'При Out > AHLim некорректно сформирован PanelState - {PanelState}.')
+        if st1 is False:
+            print_error(f'При Out > AHLim некорректно сформирован Status1 - {st1}.')
+        if 114 not in new_messages:
+            print_error(f'При Out > AHLim несформировано сообщение 114. Новые сообщения - {new_messages}')
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+def checking_not_impossible_min_ev_more_max_ev(not_error):  # Готово.
+    print_title('Проверка невозможности записи minEV > maxEV.')
+
+    # Создаем вспомогательные переменные со значениями для записи, где minEV > maxEV.
+    maxEV_values = (-9999.9, -100.1, -12.0,  -4.0,  11.95,  -555.67,  9876.123,  0.0)
+    minEV_values = (9999.99,  -90.1,  0.0,    4.0,  21.95,   555.67,  9976.123,  100.0)
+    maxEV_register = START_VALUE['MaxEV']['register']
+    minEV_register = START_VALUE['MinEV']['register']
+
+    # Записываем поочередно значения в регистры для minEV и maxEV.
+    for value in range(0, len(maxEV_values)):
+        this_is_write_error(address=minEV_register, value=minEV_values[value])
+        error_maxEV = this_is_write_error(address=maxEV_register, value=maxEV_values[value])
+
+        # Считываем значения minEV и maxEV с регистров.
+        minEV = round(read_float(address=minEV_register), 3)
+        maxEV = round(read_float(address=maxEV_register), 3)
+
+        # Если minEV и maxEV записались кореектно (сравниваем с эталонными из списков), то проверка пройдена.
+        if minEV == minEV_values[value] and maxEV == maxEV_values[value] and minEV > maxEV:
+            print_error(
+                f'Ошибочная запись значений! MIN значение({minEV_values[value]}) '
+                f'не может быть больше чем MAX({maxEV_values[value]}).'
+            )
+            not_error = False
+        elif minEV < maxEV and error_maxEV is True:
+            print_text_grey(f'Тест со значениями minEV={minEV} и maxEV={maxEV} пройден. minEV < maxEV по прежнему.')
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+# Проверка правильности записи значения уставок.
+def checking_setpoint_values(not_error):
+    print_title('Проверка правильности записи значения уставок.')
+
+    # Т.к. значения уставок записывались декоратором reset_initial_values, то
+    # необходимо считать соответствующие регисты и сравнить исходные данные со считанными.
+
+    # Проходим циклом по списку с названиями уставок. Записываем в переменные эталонное значение и считанное.
+    for setpoint in ('AHLim', 'WHLim'):
+        val = START_VALUE[setpoint]['start_value']
+        read_val = read_float(address=START_VALUE[setpoint]['register'])
+
+        # Если значения переменных равны, то данные записались верно.
+        if val == read_val:
+            print_text_grey(f'Значение уставки {setpoint} записалось верно.')
+        else:
+            print_error(f'Значение уставки {setpoint} записалось неверно. '
+                        f'Эталонное значение - {val}, считанное - {read_val}')
+            not_error = False
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
+# Проверка наличия сообщений при включени и отключении уставок.
+def checking_messages_on_off_setpoints(not_error):
+    print_title('Проверка наличия сообщений при включени и отключении уставок.')
+
+    # Создаем словарь с данными для проверки. Ключи - уставки, значения - списки со значениями кодов в сообщениях.
+    data = {
+        'WHLimEn': {'st1': 26, 'msg_on': [26, 22600], 'msg_off': [76, 22600]},
+        'AHLimEn': {'st1': 27, 'msg_on': [27, 22700], 'msg_off': [77, 22700]},
+    }
+
+    # Создаем функцию для проверки.
+    def check_setpoint_on_off(msg, required_bool_value, not_error=not_error):
+
+        # Проверяем что уставка включена по status1 и новые сообщения на соответствие ожидаемым.
+        st1 = read_status1_one_bit(number_bit=bit)
+        new_messages = read_new_messages(old_message)
+        expected_msg = msg_on if required_bool_value is True else msg_off
+        if st1 is required_bool_value and new_messages == expected_msg:
+            print_text_grey(f'Проверка {msg} {name} прошла успешно.')
+        else:
+            not_error = False
+            if new_messages != expected_msg:
+                print_error(f'Проверка {msg} провалена. Получили {new_messages}, а ожидалось {expected_msg}')
+            if st1 is not required_bool_value:
+                print_error(f'Неизвестая ошибка {msg}. st1={st1}(должен быть True).')
+        return not_error
+
+    # Проходимся циклом по словарю. И запоминаем нужные переменные.
+    for name, param in data.items():
+        msg_on = param['msg_on']
+        msg_off = param['msg_off']
+        bit = param['st1']
+
+        # ПРОВЕРКА ВКЛЮЧЕНИЯ УСТАВКИ.
+        # Читаем сообщения, включаем уставку. Вызываем функцию проверки с параметрами.
+        old_message = read_all_messages()
+        switch_position(command=name, required_bool_value=True)
+        not_error = check_setpoint_on_off(msg='включиния', required_bool_value=True)
+
+        # ПРОВЕРКА ОТКЛЮЧЕНИЯ УСТАВКИ.
+        # Читаем сообщения, отключаем уставку. Вызываем функцию проверки с параметрами.
+        old_message = read_all_messages()
+        switch_position(command=name, required_bool_value=False)
+        not_error = check_setpoint_on_off(msg='отключения', required_bool_value=False)
+    return not_error
+
+
+@writes_func_failed_or_passed
+def checking_DeltaV(not_error):  # Готово.
+    print_title('Проверка работы DeltaV при изменение Input.')
+
+    @reset_initial_values
+    def checking_DeltaV_one_mode(not_error):
+        # Задаем значение DeltaV равное 1. Запоминаем значение в Input.
+        DeltaV = 1
+        Input_value = START_VALUE['Input']['start_value']
+        write_holding_registers(address=START_VALUE['DeltaV']['register'], values=DeltaV)
+
+        # Проверяем правильность записи значения DeltaV.
+        if read_float(address=START_VALUE['DeltaV']['register']) == 1:
+            print_text_grey('DeltaV записывается верно.')
+        else:
+            print_error('DeltaV записывается не верно.')
+            not_error = False
+
+        # Подаем значения в пределах DeltaV (Input +-1).
+        for value in (0.5, -0.5, 1, -1, 0):
+            write_holding_registers(address=START_VALUE['Input']['register'], values=Input_value + value)
+
+            # Cмотрим, что значение в Out не изменилось.
+            if read_float(address=OUT_REGISTER) == Input_value:
+                print_text_grey(f'DeltaV работает верно при изменении значения Input на {value}. DeltaV={DeltaV}')
+            else:
+                print_error(f'DeltaV работает не верно при изменении значения Input на {value}. DeltaV={DeltaV}')
+                not_error = False
+
+            # Возвращаем Input к стартовому значению.
+            write_holding_registers(address=START_VALUE['Input']['register'], values=Input_value)
+
+        # Подаем значения больше DeltaV(Input +- > 1).
+        for value in (1.001, -1.001):
+            write_holding_registers(address=START_VALUE['Input']['register'], values=(Input_value + value))
+            # Cмотрим, что значение в Out изменилось.
+            Out = round(read_float(address=OUT_REGISTER), 3)
+
+            if Out == round((Input_value + value), 3):
+                print_text_grey(f'DeltaV работает верно при изменении значения Input на {value}. DeltaV={DeltaV}')
+            else:
+                print_error(f'DeltaV работает не верно при изменении значения Input на {value}. DeltaV={DeltaV}'
+                            f'Out={Out}, а должен быть {Input_value + value}')
+                not_error = False
+
+            # Возвращаем Input к стартовому значению.
+            write_holding_registers(address=START_VALUE['Input']['register'], values=Input_value)
+
+        # Подаем значения меньше DeltaV, но перезаписываем Input, чтобы в сумме получить изменение больше чем DeltaV.
+        for value in (0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.001):
+            write_holding_registers(address=START_VALUE['Input']['register'], values=(Input_value + value))
+
+        # Cмотрим, что значение в Out не изменилось.
+        if read_float(address=OUT_REGISTER) == Input_value:
+            print_text_grey('DeltaV работает верно при многократном изменении значения Input '
+                            'на значение < DeltaV, но в сумме больше чем DeltaV')
+        else:
+            print_error('DeltaV работает не верно при многократном изменении значения Input '
+                        'на значение < DeltaV, но в сумме больше чем DeltaV')
+            not_error = False
+        return not_error
+
+    for mode in WORK_MODES:
+        turn_on_mode(mode=mode)
+        print_text_white(f'Проверка в режиме {mode}.')
+        not_error = checking_DeltaV_one_mode(not_error)
+    return not_error
+
+
+
+
 @running_time
 # @start_with_limits_values
 @connect_and_close_client
@@ -628,13 +1092,23 @@ def main():
     # checking_errors_writing_registers()
     # cheking_on_off_for_cmdop()
     # checking_generation_messages_and_msg_off()
+    # cheсking_on_off_AlarmOff()
+    # checking_DeltaV()
+    # checking_not_impossible_min_ev_more_max_ev()
+    # checking_setpoint_values()
+    ##########################checking_setpoint_not_impossible_min_more_max
+    # checking_messages_on_off_setpoints()
     # cheking_incorrect_command_cmdop()
     # checking_operating_modes()
     # checking_the_installation_of_commands_from_different_control_panels()
     # checking_kvitir()
     # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
     # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
-    checking_t01()
+    # checking_t01()
+    # checking_imit2_imit1_and_imit0()
+    # checking_values_when_switching_modes()
+    # checking_signal_transfer_low_level_on_middle_level()
+    # checking_switching_between_modes_in_case_of_errors()
 
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
