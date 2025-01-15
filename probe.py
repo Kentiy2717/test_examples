@@ -40,6 +40,9 @@ from constants_FB_DP import (
 from assist_function_FB_AP import switch_position, reset_CmdOp, switch_position_for_legs, turn_on_mode
 connect_client()
 
-write_coil(address=INPUT_REGISTER, value=0, slave=1)
+# write_coil(address=40122, value=1, slave=1)
+# write_coil(address=40121, value=1, slave=1)
+print(read_float(address=18060))
+print(write_holding_registers(address=18060, values=15).isError())
 
 close_client()

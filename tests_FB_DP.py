@@ -966,27 +966,27 @@ def main():
     '''
 
     print('ОБЩИЕ ПРОВЕРКИ\n')
-    # checking_errors_writing_registers()
-    # cheking_on_off_for_cmdop()
-    # checking_generation_messages_and_msg_off()
-    # cheking_incorrect_command_cmdop()
-    # checking_operating_modes()
-    # checking_signal_transfer_low_level_on_middle_level_and_invers()
-    # checking_the_installation_of_commands_from_different_control_panels()
-    # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
-    # checking_t01()
+    checking_errors_writing_registers()
+    cheking_on_off_for_cmdop()
+    checking_generation_messages_and_msg_off()
+    cheking_incorrect_command_cmdop()
+    checking_operating_modes()
+    checking_signal_transfer_low_level_on_middle_level_and_invers()
+    checking_the_installation_of_commands_from_different_control_panels()
+    checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
+    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
+    checking_t01()
     checking_values_when_switching_modes()
-    # checking_switching_between_modes_in_case_of_errors()
+    checking_switching_between_modes_in_case_of_errors()
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    # checking_kvitir()
+    checking_kvitir()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-    # checking_checking_imit1_and_imit0()
+    checking_checking_imit1_and_imit0()
 
     print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-    # checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
 
     
     # checking_()

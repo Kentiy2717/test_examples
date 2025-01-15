@@ -1,5 +1,5 @@
 from probably_not_used.constants import SLAVE
-from common_wrappers import sleep_time_after_operation
+from common_wrappers import checking_the_value_for_writing, sleep_time_after_operation
 
 from encode_and_decode import decode_int, encode_float, encode_int, decode_float
 from probably_not_used.TCP_Client import client
@@ -27,7 +27,7 @@ def write_coil(address, value, slave=1):
 @sleep_time_after_operation
 def read_coils(address, count=1, bit=None, slave=1):
     if bit is not None:
-        return client.read_discrete_inputs(address=address, count=count, slave=slave).bits[bit]
+        return client.read_coils(address=address, count=count, slave=slave).bits[bit]
     else:
         return client.read_coils(address=address, count=count, slave=slave)
 
@@ -38,13 +38,15 @@ def write_holding_register(address, value, slave=1):
     return client.write_register(address=address, value=value, slave=slave)
 
 
+@checking_the_value_for_writing
 @sleep_time_after_operation
-def write_holding_registers(address, values, slave=1):
+def write_holding_registers(address, values, slave=1, skip_error=False):
     return client.write_registers(address=address, values=encode_float(values), slave=slave)
 
 
+@checking_the_value_for_writing
 @sleep_time_after_operation
-def write_holding_registers_int(address, values, slave=1):
+def write_holding_registers_int(address, values, slave=1, skip_error=False):
     return client.write_registers(address=address, values=encode_int(values), slave=slave)
 
 

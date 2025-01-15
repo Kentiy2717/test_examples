@@ -1,14 +1,14 @@
 # Константы для test_FB_DP
 
 START_VALUE = {
-    'Input':       {'register': 40111,  'start_value': False},
-    'ChFlt':       {'register': 40112,  'start_value': False},
-    'ModFlt':      {'register': 40113,  'start_value': False},
-    'SensFlt':     {'register': 40114,  'start_value': False},
-    'ExtFlt':      {'register': 40115,  'start_value': False},
-    'Period':      {'register': 40401,  'start_value': 100},
-    'T01':         {'register': 8000,   'start_value': 0},
-    'CmdOp':       {'register': 8001,   'start_value': 4},
+    'Input':       {'register': 40111, 'pre_values': True, 'start_value': False},
+    'ChFlt':       {'register': 40112, 'pre_values': True, 'start_value': False},
+    'ModFlt':      {'register': 40113, 'pre_values': True, 'start_value': False},
+    'SensFlt':     {'register': 40114, 'pre_values': True, 'start_value': False},
+    'ExtFlt':      {'register': 40115, 'pre_values': True, 'start_value': False},
+    'Period':      {'register': 40401, 'pre_values': 90,   'start_value': 100},
+    'T01':         {'register': 8000,  'pre_values': 1,    'start_value': 0},
+    'CmdOp':       {'register': 8001,  'pre_values': 3,    'start_value': 4},
 }
 
 WORK_MODES = ('Oos', 'Imt1', 'Imt0', 'Fld', 'Tst')

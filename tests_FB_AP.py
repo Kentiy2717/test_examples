@@ -218,7 +218,8 @@ def cheking_incorrect_command_cmdop(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def cheсking_on_off_AlarmOff(not_error):  # Готово. Возможно требует доработки проверки на все уставки, а не на одну.
+# Проверка работоспособности AlarmOff.
+def cheсking_on_off_AlarmOff(not_error):  # Возможно требует доработки проверки на все уставки, а не на одну.
     print_title('Проверка работоспособности AlarmOff.')
 
     # Переключаем AlarmOff=True и включаем верхнюю уставку. Читаем сообщения.
@@ -230,24 +231,23 @@ def cheсking_on_off_AlarmOff(not_error):  # Готово. Возможно тр
     set_value_AP(sign='>', setpoint='AHLim')
 
     # Читаем значения Out, AHLim, PanelState, значение 14 бита статус1 и проверяем сообщения.
-    Out = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
-    AHLim = decode_float(read_holding_registers(address=LEGS['AHLim']['register'], count=2))
     PanelState = read_PanelState()
-    st1 = read_status1_one_bit(number_bit=14)
+    PanelState_OutNorm = PANELSTATE['OutNorm']
+    st1 = read_status1_one_bit(number_bit=STATUS1['AHAct'])
     new_messages = read_new_messages(old_messages)
 
     # Если значение Out > AHLim, в PanelState=9, st1=True или сообщениях сработала уставка(114), то ошибка.
-    if Out > AHLim and PanelState == 9:
-        print_error('AlarmOff не работает. При Out > AHLim уставка сработала в PanelState(значение 9)')
+    if PanelState == PanelState_OutNorm and st1 is False and new_messages == []:
+        print_text_grey('Проверка работоспособности AlarmOff прошла успешно.')
+    else:
         not_error = False
-    if Out > AHLim and st1 is True:
-        print_error('AlarmOff не работает. При Out > AHLim значение 14 бита статус1 - True')
-        not_error = False
-    if Out > AHLim and new_messages != []:
-        print_error(f'AlarmOff не работает. При Out > AHLim появились новые сообщения - {new_messages}')
-        not_error = False
-    if not_error is False:
-        return not_error
+        if PanelState != PanelState_OutNorm:
+            print_error(f'AlarmOff не работает. При Out > AHLim в PanelState значение - {PanelState}, '
+                        f'должно ,быть - {PanelState_OutNorm}.')
+        if st1 is True:
+            print_error('AlarmOff не работает. При Out > AHLim значение Status1 - True')
+        if new_messages != []:
+            print_error(f'AlarmOff не работает. При Out > AHLim появились новые сообщения - {new_messages}')
 
     # Читаем сообщения. Переключаем AlarmOff=False.
     old_messages = read_all_messages()
@@ -255,12 +255,21 @@ def cheсking_on_off_AlarmOff(not_error):  # Готово. Возможно тр
 
     #  Читаем значения PanelState, значение 14 бита статус1 и проверяем сообщения.
     PanelState = read_PanelState()
-    st1 = read_status1_one_bit(number_bit=14)
+    st1 = read_status1_one_bit(number_bit=STATUS1['AHAct'])
     new_messages = read_new_messages(old_messages)
 
-    # Если значение PanelState=9, st1=True или сообщениях сработала уставка(114), то проверка прошла успешно.
-    if PanelState == 9 and st1 is True and 114 in new_messages:
-        print_text_grey('AlarmOff работает.')
+    # Проверяем корректность формирования статусов и сообщений после отключения AlarmOff.
+    if PanelState == PANELSTATE['AHAct'] and st1 is True and 114 in new_messages:
+        print_text_grey('После оключения AlarmOff PanelState, Status1 и сообщения формируются корректно.')
+    else:
+        not_error = False
+        print_error('Ошибка после включения AlarmOff!')
+        if PanelState != PANELSTATE['AHAct']:
+            print_error(f'При Out > AHLim некорректно сформирован PanelState - {PanelState}.')
+        if st1 is False:
+            print_error(f'При Out > AHLim некорректно сформирован Status1 - {st1}.')
+        if 114 not in new_messages:
+            print_error(f'При Out > AHLim несформировано сообщение 114. Новые сообщения - {new_messages}')
     return not_error
 
 
@@ -617,56 +626,62 @@ def checking_setpoint_not_impossible_min_more_max(not_error):
 
 
 @writes_func_failed_or_passed
-def checking_DeltaV(not_error):  # Готово.
+# Проверка работы DeltaV при изменение Input.
+def checking_DeltaV(not_error):
     print_title('Проверка работы DeltaV при изменение Input.')
 
     @reset_initial_values
     def checking_DeltaV_one_mode(not_error):
         # Задаем значение DeltaV равное 1 на нижнем уровне. Запоминаем значение в Out.
-        Out1 = decode_float(read_holding_registers(address=OUT_REGISTER, count=2))
-        Input = decode_float(read_holding_registers(address=LEGS['Input']['register'], count=2))
-        write_holding_registers(address=LEGS['Input']['register'], values=(Input + 1))
+        Out1 = read_float(address=OUT_REGISTER)
+        Input_value = START_VALUE['Input']['start_value'] + 1
+        write_holding_registers(address=START_VALUE['Input']['register'], values=Input_value)
         Out = read_float(address=OUT_REGISTER)
         DeltaV = Out - Out1
         write_holding_registers(address=LEGS['DeltaV']['register'], values=DeltaV)
 
         # Проверяем правильность записи значения DeltaV.
-        if DeltaV == decode_float(read_holding_registers(address=LEGS['DeltaV']['register'], count=2)):
+        if DeltaV == read_float(address=LEGS['DeltaV']['register']):
             print_text_grey('DeltaV записывается верно.')
         else:
-            print_error('DeltaV записывается не верно.')
             not_error = False
+            print_error('DeltaV записывается не верно.')
 
         # Подаем значения в пределах DeltaV (Input +-1 на нижнем уровне).
-        for value in [0.5, -0.5, 1, -1, 0]:
-            write_holding_registers(address=LEGS['Input']['register'], values=(Input + value))
+        for value in (0.5, -0.5, 1, -1, 0):
+            write_holding_registers(address=LEGS['Input']['register'], values=(Input_value + value))
 
             # Cмотрим, что значение в Out не изменилось.
             if read_float(address=OUT_REGISTER) == Out:
-                print_text_grey('DeltaV работает верно при изменении значения Out меньше чем DeltaV')
+                print_text_grey(f'DeltaV работает верно при изменении значения Input на {value}. DeltaV={DeltaV}')
             else:
-                print_error(f'DeltaV работает не верно при изменении значения на {value} Out меньше чем DeltaV')
                 not_error = False
+                print_error(f'DeltaV работает не верно при изменении значения Input на {value}. DeltaV={DeltaV}')
 
-        # Подаем значения больше DeltaV(Input +- > 1 на нижнем уровне).
-        for value in [1.001, -1.001]:
-            write_holding_registers(address=LEGS['Input']['register'], values=(Input + value))
+        # Подаем значения больше DeltaV(Input +- > 1).
+        for value in (1.001, -1.001):
+            write_holding_registers(address=START_VALUE['Input']['register'], values=(Input_value + value))
             # Cмотрим, что значение в Out изменилось.
-            if Out == decode_float(read_holding_registers(address=OUT_REGISTER, count=2)):
-                print_error('DeltaV работает не верно при изменении значения Out больше чем DeltaV')
+            Out_before = round(read_float(address=OUT_REGISTER), 3)
+
+            if Out_before == round((Out + (value * DeltaV)), 3):
+                print_text_grey(f'DeltaV работает верно при изменении значения Input на {value}. DeltaV={DeltaV}')
+            else:
                 not_error = False
-        print_text_grey('DeltaV работает верно при изменении значения Out больше чем DeltaV')
+                print_error(f'DeltaV работает не верно при изменении значения Input на {value}. DeltaV={DeltaV} '
+                            f'Out={Out_before}, а должен быть {round((Out + (value * DeltaV)), 3)}')
 
         # Подаем значения меньше DeltaV, но перезаписываем Input, чтобы в сумме получить изменение больше чем DeltaV.
-        for value in [0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.001]:
-            write_holding_registers(address=LEGS['Input']['register'], values=(Input + value))
-            Input = decode_float(read_holding_registers(address=LEGS['Input']['register'], count=2))
-        # Cмотрим, что значение в Out изменилось.
-        if Out == decode_float(read_holding_registers(address=OUT_REGISTER, count=2)):
-            print_error('DeltaV работает не верно при многократном изменении значения Out '
-                        'на значение < DeltaV, но в сумме больше чем DeltaV')
+        for value in (0, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.001):
+            write_holding_registers(address=START_VALUE['Input']['register'], values=(Input_value + value))
+
+        # Cмотрим, что значение в Out не изменилось.
+        if read_float(address=OUT_REGISTER) == Out:
+            print_text_grey('DeltaV работает верно при многократном изменении значения Input '
+                            'на значение < DeltaV, но в сумме больше чем DeltaV')
+        else:
             not_error = False
-        print_text_grey('DeltaV работает верно при многократном изменении значения Out '
+            print_error('DeltaV работает не верно при многократном изменении значения Input '
                         'на значение < DeltaV, но в сумме больше чем DeltaV')
         return not_error
 
@@ -986,7 +1001,7 @@ def checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld(not_error):  # �
 
     # Включаем режим. Находим 1% от рабочего диапазона Input.
     for mode in ('Tst', 'Fld'):
-        turn_on_mode(mode=mode)
+        not_error = turn_on_mode(mode=mode)
         RangeMax_value = START_VALUE['RangeMax']['start_value']
         RangeMin_value = START_VALUE['RangeMin']['start_value']
         one_percent_of_input = (RangeMax_value - RangeMin_value) * 0.01
@@ -1712,42 +1727,42 @@ def main():
     '''
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    # cheсking_on_off_AlarmOff()
-    # checking_messages_on_off_setpoints()
-    # checking_setpoint_values()
-    # checking_setpoint_not_impossible_min_more_max()
-    # checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
-    # checking_kvitir()
-    # checking_the_installation_of_commands_from_different_control_panels()
+    cheсking_on_off_AlarmOff()
+    checking_messages_on_off_setpoints()
+    checking_setpoint_values()
+    checking_setpoint_not_impossible_min_more_max()
+    checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
+    checking_kvitir()
+    checking_the_installation_of_commands_from_different_control_panels()
 
     print('ОБЩИЕ ПРОВЕРКИ\n')
-    # checking_errors_writing_registers()
-    # cheking_on_off_for_cmdop()
-    # checking_generation_messages_and_msg_off()
-    # cheking_incorrect_command_cmdop()
-    # checking_operating_modes()
-    # checking_signal_transfer_low_level_on_middle_level()
-    # checking_write_maxEV_and_minEV()
-    # checking_not_impossible_min_ev_more_max_ev()
-    # checking_work_setpoint()
-    # checking_working_setpoint_with_large_jump()
-    # checking_switching_between_modes_in_case_of_errors()
+    checking_errors_writing_registers()
+    cheking_on_off_for_cmdop()
+    checking_generation_messages_and_msg_off()
+    cheking_incorrect_command_cmdop()
+    checking_operating_modes()
+    checking_signal_transfer_low_level_on_middle_level()
+    checking_write_maxEV_and_minEV()
+    checking_not_impossible_min_ev_more_max_ev()
+    checking_work_setpoint()
+    checking_working_setpoint_with_large_jump()
+    checking_switching_between_modes_in_case_of_errors()
     checking_DeltaV()
-    # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
-    # checking_SpeedLim()
-    # checking_t01()
+    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
+    checking_SpeedLim()
+    checking_t01()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-    # checking_simulation_mode_turn_on()
-    # checking_values_when_switching_modes()
-    # checking_input_in_simulation_mode()
-    # checking_simulation_mode_when_change_input_and_imitinput()
-    # checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
-    # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    # checking_work_setpoint_in_imit_mode_when_write_input()
+    checking_simulation_mode_turn_on()
+    checking_values_when_switching_modes()
+    checking_input_in_simulation_mode()
+    checking_simulation_mode_when_change_input_and_imitinput()
+    checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
+    checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
+    checking_work_setpoint_in_imit_mode_when_write_input()
 
     print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-    # checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
 
 
 if __name__ == "__main__":

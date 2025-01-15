@@ -35,6 +35,27 @@ def sleep_time_after_operation(func):
     return wrapper
 
 
+def checking_the_value_for_writing(func):
+    def wrapper(*args, **kwargs):
+        from common_read_and_write_functions import read_float
+
+        # Извлекаем значения address, values/value и skip_error из аргументов функции.
+        address = kwargs.get('address', args[0] if len(args) > 0 else None)
+        values = kwargs.get('values', args[1] if len(args) > 1 else None)
+        value = kwargs.get('value', args[1] if len(args) > 1 else None)
+        skip_error = kwargs.get('skip_error', args[1] if len(args) > 2 else None)
+
+        # Если значения однираковые то выдаем ошибку.
+        if (values if value is None else value) == read_float(address=address) and not skip_error:
+            print_failed_test(f'\n\n!!!   Записываемое значение равно исходному({values, value})   !!!\n'
+                              '!!!!!!!!!   ДОБАВЬ СМЕНУ ЗНАЧЕНИЯ ПЕРЕД ЗАПИСЬЮ   !!!!!!!!!!\n\n')
+            raise ValueError('Ошибка записи. Записываемое значение равно исходному.')
+
+        result = func(*args, **kwargs)
+        return result
+    return wrapper
+
+
 def running_time(func):
     def wrapper(*args, **kwargs):
         start_time = time.time()
