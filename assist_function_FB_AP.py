@@ -152,10 +152,10 @@ def set_value_AP(
     return Input
 
 
-def write_min_max_EV(MinEV=0.0, MaxEV=100.0):
+def write_min_max_EV(MinEV=0.0, MaxEV=100.0, skip_error=False):
     '''Записывает значение макс и мин инженерных значений.'''
-    write_holding_registers(address=LEGS['MinEV']['register'], values=MinEV)
-    write_holding_registers(address=LEGS['MaxEV']['register'], values=MaxEV)
+    write_holding_registers(address=LEGS['MinEV']['register'], values=MinEV, skip_error=skip_error)
+    write_holding_registers(address=LEGS['MaxEV']['register'], values=MaxEV, skip_error=skip_error)
 
 
 def check_write_values_all_setpoints():
@@ -358,7 +358,7 @@ def check_work_kvitir_off(old_messages, not_error):
     return not_error
 
 
-def turn_on_mode(mode: Literal['Oos', 'Imit', 'Fld', 'Tst']):
+def turn_on_mode(mode: Literal['Oos', 'Imit', 'Fld', 'Tst'], not_error):
     '''
     Включает необходимый режим если он еще не включен:\n
     'Oos' - Маскирование, 'Imit' - Имитация,\n
@@ -371,11 +371,10 @@ def turn_on_mode(mode: Literal['Oos', 'Imit', 'Fld', 'Tst']):
         write_CmdOp(command=mode)
 
     # Возвращаем False и сообщение об ощибки, если включить не удалось.
-    if read_status1_one_bit(number_bit=STATUS1[mode]) is True:
-        return True
-    else:
+    if read_status1_one_bit(number_bit=STATUS1[mode]) is False:
+        not_error = False
         print_error(f'Ошибка! Не удалось включить режим {mode}. Дальнейшее тестирование нецелесообразно.')
-        return False
+    return not_error
 
 
 def values_out_when_turn_on_simulation_mode(mode: Literal['Oos', 'Imit', 'Fld', 'Tst'], not_error):

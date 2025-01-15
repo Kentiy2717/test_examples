@@ -1,1 +1,15 @@
 py tests_Fb_AP.py
+py tests_Fb_DP.py
+py tests_Fb_DPcc.py
+py tests_Fb_DPcc.py
+py tests_Fb_DP.py
+py tests_Fb_AP.py
+py tests_Fb_AP.py
+py tests_Fb_DP.py
+py tests_Fb_DPcc.py
+py tests_Fb_AP.py
+py tests_Fb_AP.py
+py tests_Fb_AP.py
+py tests_Fb_AP.py
+py tests_Fb_AP.py
+py tests_Fb_AP.py

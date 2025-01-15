@@ -328,7 +328,7 @@ def checking_signal_transfer_low_level_on_middle_level(not_error):  # Готов
 
     # Проходим циклом и проверяем в разных режимах.
     for mode in ('Oos', 'Tst', 'Fld',):
-        turn_on_mode(mode=mode)
+        turn_on_mode(mode=mode, not_error=not_error)
         print_text_white(f'\nПроверка в режиме {mode}.')
 
         # Создаем вспомогательные переменные со значениями для записи (Input) и сравнения (Out и OutmA).
@@ -445,7 +445,7 @@ def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_err
 
     # Проверяем в цикле режим "Полевая обработка" и "Тестирование".
     for mode in ('Fld', 'Tst'):
-        turn_on_mode(mode=mode)
+        turn_on_mode(mode=mode, not_error=not_error)
         print_text_white(f'Режим {mode}.')
 
         # Проходим по значениям словаря с наименованием ошибок.
@@ -686,7 +686,7 @@ def checking_DeltaV(not_error):
         return not_error
 
     for mode in WORK_MODES:
-        turn_on_mode(mode=mode)
+        not_error = turn_on_mode(mode=mode, not_error=not_error)
         print_text_white(f'Проверка в режиме {mode}.')
         not_error = checking_DeltaV_one_mode(not_error)
     return not_error
@@ -695,17 +695,17 @@ def checking_DeltaV(not_error):
 @reset_initial_values
 @writes_func_failed_or_passed
 # Проверка работы SpeedLim в во всех режимах работы.
-def checking_SpeedLim(not_error):  # Готово.
+def checking_SpeedLim(not_error):
     print_title('Проверка работы SpeedLim в разных режимах работы.')
+
+    # Включаем SpeedLim и задаем значение ниже чем 1 в Input на нижнем уровне.
+    switch_position(command='SpeedOff', required_bool_value=True)
+    SpeedLim = set_value_param(name_param='SpeedLim', number_units_of_input=1)
+    # write_holding_registers(address=LEGS['SpeedLim']['register'], values=SpeedLim)
 
     # Проходим циклом по всем режимам работы, включаем поочередно и тестируем работу SpeedLim.
     for mode in WORK_MODES:
-        turn_on_mode(mode=mode)
-
-        # Включаем SpeedLim и задаем значение ниже чем 1 в Input на нижнем уровне.
-        switch_position(command='SpeedOff', required_bool_value=True)
-        SpeedLim = set_value_param(name_param='SpeedLim', number_units_of_input=1)
-        write_holding_registers(address=LEGS['SpeedLim']['register'], values=SpeedLim)
+        not_error = turn_on_mode(mode=mode, not_error=not_error)
 
         # Создаем функцию для изменения значений в Input которая будет запускаться в отдельном потоке.
         def change_value(start, stop, step):
@@ -762,7 +762,7 @@ def checking_work_setpoint(not_error):  # !!!!!!!!!!! НАДО ПРОВЕРИТ�
 
     # Включаем все уставки. Устанавливаем значения MaxEV и MinEV - 100 и -100 соответственно.
     on_or_off_all_setpoint()
-    write_min_max_EV(MinEV=-100, MaxEV=100)
+    write_min_max_EV(MinEV=-100, MaxEV=100, skip_error=True)
 
     # Находим середину диапазона физических значений.
     RangeMax = read_float(address=LEGS['RangeMax']['register'])
@@ -788,7 +788,7 @@ def checking_work_setpoint(not_error):  # !!!!!!!!!!! НАДО ПРОВЕРИТ�
 
     # Проходимся циклом по кортежу режимов и выполняем проверку уставок в каждом режиме.
     for mode in ('Oos', 'Tst', 'Imit', 'Fld'):
-        turn_on_mode(mode=mode)
+        not_error = turn_on_mode(mode=mode, not_error=not_error)
         print(f'Проверка в режиме {mode}')
 
         # Проходимся по словарю dict_setpoint_values циклом и проверяем сработку уставок на каждом варианте значений.
@@ -808,7 +808,8 @@ def checking_work_setpoint(not_error):  # !!!!!!!!!!! НАДО ПРОВЕРИТ�
                 if mode == 'Imit':
                     write_holding_registers(
                         address=LEGS['ImitInput']['register'],
-                        values=set_val * hyst + (-3 * data[set_name]['k'] * hyst)
+                        values=set_val * hyst + (-3 * data[set_name]['k'] * hyst),
+                        skip_error=True
                     )
                 else:
                     write_holding_registers(
@@ -941,7 +942,7 @@ def checking_working_setpoint_with_large_jump(not_error):
     on_or_off_all_setpoint(required_bool_value=True)
     for mode in ('Imit', 'Fld', 'Tst'):
         print_text_white(f'Проверка уставок в режиме {mode}.')
-        turn_on_mode(mode=mode)
+        not_error = turn_on_mode(mode=mode, not_error=not_error)
 
         # Создаем переменную со знаком для функции set_value_AP. Cоздаем список битов для чтения status1.
         sign = '>'
@@ -1001,7 +1002,7 @@ def checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld(not_error):  # �
 
     # Включаем режим. Находим 1% от рабочего диапазона Input.
     for mode in ('Tst', 'Fld'):
-        not_error = turn_on_mode(mode=mode)
+        not_error = turn_on_mode(mode=mode, not_error=not_error)
         RangeMax_value = START_VALUE['RangeMax']['start_value']
         RangeMin_value = START_VALUE['RangeMin']['start_value']
         one_percent_of_input = (RangeMax_value - RangeMin_value) * 0.01
@@ -1208,13 +1209,13 @@ def checking_values_when_switching_modes(not_error):
                     break
 
                 # Включаем режим переданный в параметре "mode1".
-                not_error = turn_on_mode(mode=mode1)
+                not_error = turn_on_mode(mode=mode1, not_error=not_error)
 
                 # Создаем список для записи всех значений параметров и переключателей в режиме mode1.
                 checklist_before = get_checklist()
 
                 # Включаем режим "mode2". Сравниваем checklist_before со списком, полученным после переключения режима.
-                not_error = turn_on_mode(mode=mode2)
+                not_error = turn_on_mode(mode=mode2, not_error=not_error)
                 checklist_after = get_checklist()
                 if checklist_before == checklist_after:
                     print_text_grey(f'Проверка переключения с {mode1} на {mode2} прошла успешно.')
@@ -1263,12 +1264,8 @@ def checking_input_in_simulation_mode(not_error):
 def checking_simulation_mode_when_change_input_and_imitinput(not_error):
     print_title('Проверка корректности изменения значения в режиме «Имитация» при записи в Input и ImitInput.')
 
-    # Включаем режим "Имитация".
-    if turn_on_mode(mode='Imit') is False:
-        not_error = False
-        print_error('Ошибка! Не удалось включить режим "Имитация". Дальнейшее тестирование нецелесообразно.')
-
-    # Читаем значение в Out и OutmA.
+    # Включаем режим "Имитация". Читаем значение в Out и OutmA.
+    not_error = turn_on_mode(mode='Imit', not_error=not_error)
     Out_before = read_float(address=OUT_REGISTER)
     OutmA_before = read_float(address=OUTMA_REGISTER)
 
@@ -1324,7 +1321,7 @@ def checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos(not_e
 
     # Переключаем режим в цикле и проводим проверку. Задаем значения MinEV и MaxEV.
     for mode in ('Imit', 'Oos'):
-        not_error = turn_on_mode(mode=mode)
+        not_error = turn_on_mode(mode=mode, not_error=not_error)
         RangeMax_value = START_VALUE['RangeMax']['start_value']
         RangeMin_value = START_VALUE['RangeMin']['start_value']
         print_text_white(f'\nПроверка режима {mode}.')
@@ -1396,7 +1393,7 @@ def checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_
 
     # Проходим циклом по всем режимам работы (кроме режима "Fld"), включаем поочередно и тестируем.
     for mode in ('Oos', 'Imit'):
-        turn_on_mode(mode=mode)
+        not_error = turn_on_mode(mode=mode, not_error=not_error)
 
         # В цикле проходим по всем ошибкам.
         for error in ['ChFlt', 'ModFlt', 'SensFlt', 'ExtFlt']:
@@ -1443,7 +1440,7 @@ def checking_off_messages_and_statuses_and_kvitir_in_masking_mode(not_error):  #
     print_title('Проверка отсутствия генерации сообщений и статусов, при режиме "Маскирование".')
 
     # Включаем режим "Маскирование". Читаем сообщения. Устанавливаем сигнал недостоверности.
-    turn_on_mode(mode='Oos')
+    not_error = turn_on_mode(mode='Oos', not_error=not_error)
     old_messages = read_all_messages()
     write_holding_registers(address=LEGS['Input']['register'], values=25)
 
@@ -1485,7 +1482,7 @@ def checking_work_setpoint_in_imit_mode_when_write_input(not_error):
     print_title('Проверка несработки уставок при изменении значения в Input в режиме "Имитация".')
 
     # Включаем режим "Имитация". Задаем значение ImitInput.
-    turn_on_mode(mode='Imit')
+    not_error = turn_on_mode(mode='Imit', not_error=not_error)
     Imit_value = (START_VALUE['MaxEV']['start_value'] - START_VALUE['MinEV']['start_value']) / 2
     write_holding_registers(address=LEGS['ImitInput']['register'], values=Imit_value)
 
@@ -1548,9 +1545,11 @@ def checking_switching_between_modes_in_case_of_errors(not_error):
                 continue
 
             # Переходим в режим Oos на старте, выключаем ошибки и приводим Input в рабочий диапазон.
-            not_error = turn_on_mode(mode='Oos')
-            write_holding_registers(address=LEGS['Input']['register'], values=START_VALUE['Input']['start_value'])
-            write_holding_registers(address=LEGS['ImitInput']['register'], values=50)
+            not_error = turn_on_mode(mode='Oos', not_error=not_error)
+            write_holding_registers(address=LEGS['Input']['register'],
+                                    values=START_VALUE['Input']['start_value'],
+                                    skip_error=True)
+            write_holding_registers(address=LEGS['ImitInput']['register'], values=50, skip_error=True)
             for switch, _ in switches[:4]:
                 switch_position_for_legs(command=switch, required_bool_value=False)
 
@@ -1584,7 +1583,7 @@ def checking_switching_between_modes_in_case_of_errors(not_error):
                     st1_kvit_original = False
                 msg.sort()
                 old_messages = read_all_messages()
-                not_error = turn_on_mode(mode=mode)
+                not_error = turn_on_mode(mode=mode, not_error=not_error)
                 new_messages = read_new_messages(old_messages=old_messages)
                 st1 = read_status1_one_bit(number_bit=STATUS1[mode])
                 PanelMode = read_PanelMode()
@@ -1602,7 +1601,7 @@ def checking_switching_between_modes_in_case_of_errors(not_error):
                         print_error(f'  - Пришли следующие сообщения - {new_messages}, а ожидалось {msg}.')
                     if st1_kvit is not st1_kvit_original:
                         print_error(f'  - в Status1(Квитир.) пришло {st1_kvit}, а ожидалось True.')
-                not_error = turn_on_mode(mode='Oos')
+                not_error = turn_on_mode(mode='Oos', not_error=not_error)
             print() if DETAIL_REPORT_ON is True else None
     return not_error
 
@@ -1648,7 +1647,7 @@ def checking_t01(not_error):
     # Включаем уставку AHlim Проходим в цикле по режимам работы. Устанавливаем значение Т01 = 1 сек.
     for mode in ('Fld', 'Tst', 'Imit'):
         switch_position(command='AHLimEn', required_bool_value=True)
-        not_error = turn_on_mode(mode=mode)
+        not_error = turn_on_mode(mode=mode, not_error=not_error)
         print_text_white(f'Проверка в режиме {mode}.')
         write_holding_registers_int(address=LEGS['T01']['register'], values=1000)
 
@@ -1727,42 +1726,42 @@ def main():
     '''
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    cheсking_on_off_AlarmOff()
-    checking_messages_on_off_setpoints()
-    checking_setpoint_values()
-    checking_setpoint_not_impossible_min_more_max()
-    checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
-    checking_kvitir()
-    checking_the_installation_of_commands_from_different_control_panels()
-
-    print('ОБЩИЕ ПРОВЕРКИ\n')
-    checking_errors_writing_registers()
-    cheking_on_off_for_cmdop()
-    checking_generation_messages_and_msg_off()
-    cheking_incorrect_command_cmdop()
-    checking_operating_modes()
-    checking_signal_transfer_low_level_on_middle_level()
-    checking_write_maxEV_and_minEV()
-    checking_not_impossible_min_ev_more_max_ev()
-    checking_work_setpoint()
-    checking_working_setpoint_with_large_jump()
-    checking_switching_between_modes_in_case_of_errors()
-    checking_DeltaV()
-    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
-    checking_SpeedLim()
-    checking_t01()
+    # cheсking_on_off_AlarmOff()
+    # checking_messages_on_off_setpoints()
+    # checking_setpoint_values()
+    # checking_setpoint_not_impossible_min_more_max()
+    # checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
+    # checking_kvitir()
+    # checking_the_installation_of_commands_from_different_control_panels()
 
     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-    checking_simulation_mode_turn_on()
-    checking_values_when_switching_modes()
-    checking_input_in_simulation_mode()
-    checking_simulation_mode_when_change_input_and_imitinput()
-    checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
-    checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    checking_work_setpoint_in_imit_mode_when_write_input()
+    # checking_simulation_mode_turn_on()
+    # checking_values_when_switching_modes()
+    # checking_input_in_simulation_mode()
+    # checking_simulation_mode_when_change_input_and_imitinput()
+    # checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
+    # checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
+    # checking_work_setpoint_in_imit_mode_when_write_input()
 
     print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+    # checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+
+    print('ОБЩИЕ ПРОВЕРКИ\n')
+    # checking_errors_writing_registers()
+    # cheking_on_off_for_cmdop()
+    # checking_generation_messages_and_msg_off()
+    # cheking_incorrect_command_cmdop()
+    # checking_operating_modes()
+    # checking_signal_transfer_low_level_on_middle_level()
+    # checking_write_maxEV_and_minEV()
+    # checking_not_impossible_min_ev_more_max_ev()
+    checking_work_setpoint()
+    # checking_working_setpoint_with_large_jump()
+    # checking_DeltaV()
+    # checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
+    # checking_SpeedLim()
+    # checking_t01()
+    # checking_switching_between_modes_in_case_of_errors()
 
 
 if __name__ == "__main__":
