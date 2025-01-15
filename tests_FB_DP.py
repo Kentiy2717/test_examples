@@ -529,7 +529,7 @@ def checking_checking_imit1_and_imit0(not_error):
 
         # Устанавливаем Input в value. Считываем Out и проверяем соответствие режиму.
         write_coil(address=INPUT_REGISTER, value=value)
-        Out = read_coils(address=OUT_REGISTER, bit=0)
+        Out = read_discrete_inputs(address=OUT_REGISTER, bit=0)
         if Out is True and mode == 'Imt1':
             print_text_grey(f'В режиме {mode}(Имитация 1) при изменении Input в {value}, Out = {Out}. '
                             'Проверка прошла успешно.')
@@ -746,7 +746,7 @@ def checking_t01(not_error):
             number_bit_kvitir = STATUS1['Kvitir']
             st1 = read_status1_one_bit(number_bit=number_bit)
             st1_kvitir = read_status1_one_bit(number_bit=number_bit_kvitir)
-            Out = read_coils(address=OUT_REGISTER, bit=0)
+            Out = read_discrete_inputs(address=OUT_REGISTER, bit=0)
             if (sleep_time < 1.0 and mode == 'Imt0') or (sleep_time >= 1.0 and mode in ('Imt1', 'Fld')):
                 expected_Out = True
             else:
@@ -965,6 +965,15 @@ def main():
     Главная функция для запуска тестов ФБ АП.
     '''
 
+    print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
+    checking_kvitir()
+
+    print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
+    checking_checking_imit1_and_imit0()
+
+    print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
+    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+
     print('ОБЩИЕ ПРОВЕРКИ\n')
     checking_errors_writing_registers()
     cheking_on_off_for_cmdop()
@@ -978,15 +987,6 @@ def main():
     checking_t01()
     checking_values_when_switching_modes()
     checking_switching_between_modes_in_case_of_errors()
-
-    print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    checking_kvitir()
-
-    print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-    checking_checking_imit1_and_imit0()
-
-    print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
 
     
     # checking_()
