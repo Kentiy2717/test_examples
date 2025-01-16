@@ -1,11 +1,11 @@
 from typing import Literal
 
 from common.common_read_and_write_functions import this_is_write_error, write_holding_register
-from FB_DPcc.constants_FB_DPcc import CMDOP, CMDOP_REGISTER, PANELSIG, START_VALUE, STATUS1
+from FB_VLV.constants_FB_VLV import CMDOP, CMDOP_REGISTER, PANELSIG, START_VALUE, STATUS1
 from common.func_print_console_and_write_file import print_error, print_text_grey
-from FB_DPcc.read_and_write_functions_FB_DPcc import reset_CmdOp, write_CmdOp
+from FB_VLV.read_and_write_functions_FB_VLV import reset_CmdOp, write_CmdOp
 from common.read_messages import read_new_messages
-from FB_DPcc.read_stutuses_and_message_FB_DPcc import read_PanelSig_one_bit, read_status1_one_bit
+from FB_VLV.read_stutuses_and_message_FB_VLV import read_PanelSig_one_bit, read_status1_one_bit
 
 
 def switch_position(command: Literal['MsgOff', 'WHLimEn', 'AHLimEn'],

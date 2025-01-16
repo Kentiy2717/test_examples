@@ -1,20 +1,6 @@
 from typing import Literal
 
-from FB_AP.constants_FB_AP import (
-    OUTMA_REGISTER,
-    PANELSIG,
-    REGISTERS_AND_VALUE_WRITE_FOR_BEGIN_TEST as LEGS,
-    SWITCHES_ST1_PANSIG_MESSAGE as SWITCH,
-    STATUS1,
-    START_VALUE,
-    OUT_REGISTER
-)
-from FB_AP.read_and_write_functions_FB_AP import reset_CmdOp, write_CmdOp
 from common.read_messages import read_all_messages, read_new_messages
-from FB_AP.read_stutuses_and_message_FB_AP import (
-    read_PanelSig_one_bit,
-    read_status1_one_bit,
-)
 from common.common_read_and_write_functions import (
     read_float,
     write_holding_register,
@@ -28,6 +14,20 @@ from common.func_print_console_and_write_file import (
     print_text_grey,
 )
 from common.encode_and_decode import decode_float
+from FB_AP.constants_FB_AP import (
+    OUTMA_REGISTER,
+    PANELSIG,
+    REGISTERS_AND_VALUE_WRITE_FOR_BEGIN_TEST as LEGS,
+    SWITCHES_ST1_PANSIG_MESSAGE as SWITCH,
+    STATUS1,
+    START_VALUE,
+    OUT_REGISTER
+)
+from FB_AP.read_and_write_functions_FB_AP import reset_CmdOp, write_CmdOp
+from FB_AP.read_stutuses_and_message_FB_AP import (
+    read_PanelSig_one_bit,
+    read_status1_one_bit,
+)
 
 
 def set_value_setpoint(name_param: Literal['AHLim', 'WHLim', 'THLim', 'TLLim', 'WLLim', 'ALLim'],

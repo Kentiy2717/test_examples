@@ -40,28 +40,26 @@ WORK_MODES = ('Oos', 'Imit', 'Fld', 'Tst')
 # Словарь с номерами регистров ([REGISTER]), со значениями для проверки ([VALUE][0], [VALUE][1]) и
 # дефолтными значениями для записи необходимых данных для работы системы.
 REGISTERS_AND_VALUE_WRITE_FOR_BEGIN_TEST = {  # LEGS
-    'CmdOp':       {'register': 801,    'TEST_VALUES': [-4,   0, 4],        'START_VALUE': 4},          # номер регистра для записи команд управления
-    'Input':       {'register': 40500,  'TEST_VALUES': [-4.1, 0.0, 12.0],   'START_VALUE': 12.0},          # номер регистра для чтения и записи аналогового параметра (нижний уровень).
-    'RangeMax':    {'register': 40504,	'TEST_VALUES': [-4.1, 0.0, 20.0],   'START_VALUE': 20.0},        # Максимальное физическое значение.
-    'RangeMin':    {'register': 40502,	'TEST_VALUES': [-4.1, 0.0, 4.0],    'START_VALUE': 4.0},        # Минимальное физическое значение.
-    'DeltaV':      {'register': 2022,   'TEST_VALUES': [-4.1, 0.5, 0.0],    'START_VALUE': 0.0},        # Дельта по значению.
-    'Period':      {'register': 40400,  'TEST_VALUES': [-4,   0,   100],    'START_VALUE': 100},         # Период отправки в МЭК.
-    'ImitInput':   {'register': 2000,   'TEST_VALUES': [-4.1, 0.0, 50.0],   'START_VALUE': 50.0},      # Значение имитации.
-    'MaxEV':       {'register': 2006,   'TEST_VALUES': [-4.1, 0.0, 100.0],  'START_VALUE': 100.0},          # Максимальное инженерное значение 100 *С.
-    'MinEV':       {'register': 2004,   'TEST_VALUES': [-4.1, 0.0, 0.0],    'START_VALUE': 0.0},          # Минимальное инженерное значение 0 *С.
-    'T01':         {'register': 800,    'TEST_VALUES': [-4,   0,   1],      'START_VALUE': 1},            # Задержка на срабатывание уставки [мс].
-    'SpeedLim':    {'register': 2002,   'TEST_VALUES': [-4.1, 0.0, 5.0],    'START_VALUE': 5.0},      # Максимальная скорость изменения параметра в промежутки времени.
-    'AHLim':       {'register': 2008,   'TEST_VALUES': [-4.1, 0.0, 90.0],   'START_VALUE': 90.0},        # !!!!!!!!!!!!!!!!!ДОДЕЛАЯ ОПИСАНИЯ!!!!!!!!!!!!!!
-    'WHLim':       {'register': 2010,   'TEST_VALUES': [-4.1, 0.0, 80.0],   'START_VALUE': 80.0},        # !!!!!!!!!!!!!!!!!ДОДЕЛАЯ ОПИСАНИЯ!!!!!!!!!!!!!! 
-    'THLim':       {'register': 2012,   'TEST_VALUES': [-4.1, 0.0, 70.0],   'START_VALUE': 70.0},        # !!!!!!!!!!!!!!!!!ДОДЕЛАЯ ОПИСАНИЯ!!!!!!!!!!!!!! 
-    'TLLim':       {'register': 2014,   'TEST_VALUES': [-4.1, 0.0, 30.0],   'START_VALUE': 30.0},        # !!!!!!!!!!!!!!!!!ДОДЕЛАЯ ОПИСАНИЯ!!!!!!!!!!!!!! 
-    'WLLim':       {'register': 2016,   'TEST_VALUES': [-4.1, 0.0, 20.0],   'START_VALUE': 20.0},        # !!!!!!!!!!!!!!!!!ДОДЕЛАЯ ОПИСАНИЯ!!!!!!!!!!!!!! 
-    'ALLim':       {'register': 2018,   'TEST_VALUES': [-4.1, 0.0, 10.0],   'START_VALUE': 10.0},        # !!!!!!!!!!!!!!!!!ДОДЕЛАЯ ОПИСАНИЯ!!!!!!!!!!!!!! 
-    'Hyst':        {'register': 2020,   'TEST_VALUES': [-4.1, 0.0, 1.5],    'START_VALUE': 0.5},        # !!!!!!!!!!!!!!!!!ДОДЕЛАЯ ОПИСАНИЯ!!!!!!!!!!!!!!
-    'Kf':          {'register': 2024,   'TEST_VALUES': [-4.1, 0.0, 0.85],   'START_VALUE': 0.85},        # !!!!!!!!!!!!!!!!!ДОДЕЛАЯ ОПИСАНИЯ!!!!!!!!!!!!!! 
+    'CmdOp':       {'register': 801,    'TEST_VALUES': [-4,   0, 4],        'START_VALUE': 4},
+    'Input':       {'register': 40500,  'TEST_VALUES': [-4.1, 0.0, 12.0],   'START_VALUE': 12.0},
+    'RangeMax':    {'register': 40504,	'TEST_VALUES': [-4.1, 0.0, 20.0],   'START_VALUE': 20.0},
+    'RangeMin':    {'register': 40502,	'TEST_VALUES': [-4.1, 0.0, 4.0],    'START_VALUE': 4.0},
+    'DeltaV':      {'register': 2022,   'TEST_VALUES': [-4.1, 0.5, 0.0],    'START_VALUE': 0.0},
+    'Period':      {'register': 40400,  'TEST_VALUES': [-4,   0,   100],    'START_VALUE': 100},
+    'ImitInput':   {'register': 2000,   'TEST_VALUES': [-4.1, 0.0, 50.0],   'START_VALUE': 50.0},
+    'MaxEV':       {'register': 2006,   'TEST_VALUES': [-4.1, 0.0, 100.0],  'START_VALUE': 100.0},
+    'MinEV':       {'register': 2004,   'TEST_VALUES': [-4.1, 0.0, 0.0],    'START_VALUE': 0.0},
+    'T01':         {'register': 800,    'TEST_VALUES': [-4,   0,   1],      'START_VALUE': 1},
+    'SpeedLim':    {'register': 2002,   'TEST_VALUES': [-4.1, 0.0, 5.0],    'START_VALUE': 5.0},
+    'AHLim':       {'register': 2008,   'TEST_VALUES': [-4.1, 0.0, 90.0],   'START_VALUE': 90.0},
+    'WHLim':       {'register': 2010,   'TEST_VALUES': [-4.1, 0.0, 80.0],   'START_VALUE': 80.0},
+    'THLim':       {'register': 2012,   'TEST_VALUES': [-4.1, 0.0, 70.0],   'START_VALUE': 70.0},
+    'TLLim':       {'register': 2014,   'TEST_VALUES': [-4.1, 0.0, 30.0],   'START_VALUE': 30.0},
+    'WLLim':       {'register': 2016,   'TEST_VALUES': [-4.1, 0.0, 20.0],   'START_VALUE': 20.0},
+    'ALLim':       {'register': 2018,   'TEST_VALUES': [-4.1, 0.0, 10.0],   'START_VALUE': 10.0},
+    'Hyst':        {'register': 2020,   'TEST_VALUES': [-4.1, 0.0, 1.5],    'START_VALUE': 0.5},
+    'Kf':          {'register': 2024,   'TEST_VALUES': [-4.1, 0.0, 0.85],   'START_VALUE': 0.85},
 }
-
-
 
 
 INPUT_REGISTER = START_VALUE['Input']['register']

@@ -1,4 +1,3 @@
-
 from common.common_read_and_write_functions import write_holding_register
 from common.common_wrappers import sleep_time_after_operation
 from FB_AP.constants_FB_AP import (

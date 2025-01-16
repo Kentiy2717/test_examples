@@ -1,4 +1,8 @@
 from common.encode_and_decode import decoder_bits
+from common.common_read_and_write_functions import (
+    write_holding_registers,
+    read_holding_registers
+)
 from FB_AP.constants_FB_AP import (
     STATUS1_REGISTER,
     STATUS2_REGISTER,
@@ -6,10 +10,6 @@ from FB_AP.constants_FB_AP import (
     PANEL_MODE_REGISTER,
     PANEL_STATE_REGISTER,
     PANEL_ALM_REGISTER,
-)
-from common.common_read_and_write_functions import (
-    write_holding_registers,
-    read_holding_registers
 )
 
 

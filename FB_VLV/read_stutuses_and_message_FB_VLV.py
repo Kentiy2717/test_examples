@@ -1,4 +1,4 @@
-from FB_DPcc.constants_FB_DPcc import (
+from FB_VLV.constants_FB_VLV import (
     PANEL_ALM_REGISTER,
     PANEL_MODE_REGISTER,
     PANEL_SIG_REGISTER,
