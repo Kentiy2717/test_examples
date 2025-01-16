@@ -1,7 +1,15 @@
-from itertools import combinations
+import sys
+import os
 import threading
+
+# Эта строка добавляет путь к корневой директории проекта в sys.path, чтобы Python мог находить модули и пакеты,
+# расположенные в этом проекте, независимо от текущей директории запуска скрипта.
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from itertools import combinations
 from time import sleep
-from assist_function_FB_AP import (
+
+from FB_AP.assist_function_FB_AP import (
     check_work_kvitir_off,
     check_work_kvitir_on,
     check_write_values_all_setpoints,
@@ -15,8 +23,7 @@ from assist_function_FB_AP import (
     values_out_when_turn_on_simulation_mode,
     write_min_max_EV,
     )
-from probably_not_used.constants import DETAIL_REPORT_ON
-from constants_FB_AP import (
+from FB_AP.constants_FB_AP import (
     BAD_REGISTER,
     INPUT_REGISTER,
     PANELSTATE,
@@ -36,14 +43,18 @@ from constants_FB_AP import (
     VALUE_UNRELIABILITY,
     WORK_MODES
 )
-from encode_and_decode import decode_float
-from func_print_console_and_write_file import (
-    print_text_white,
-    print_title,
-    print_error,
-    print_text_grey,
+from FB_AP.read_and_write_functions_FB_AP import reset_CmdOp, write_CmdOp
+from FB_AP.read_stutuses_and_message_FB_AP import (
+    read_PanelAlm_one_bit,
+    read_status1_one_bit,
+    read_status2_one_bit,
+    read_PanelSig_one_bit,
+    read_PanelMode,
+    read_PanelState,
 )
-from common_read_and_write_functions import (
+from FB_AP.wrappers_FB_AP import start_with_limits_values, reset_initial_values
+from common.constants import DETAIL_REPORT_ON
+from common.common_read_and_write_functions import (
     read_discrete_inputs,
     this_is_write_error,
     write_holding_register,
@@ -52,27 +63,25 @@ from common_read_and_write_functions import (
     read_float,
     write_holding_registers_int
 )
-from read_messages import read_all_messages, read_new_messages
-from read_and_write_functions_FB_AP import reset_CmdOp, write_CmdOp
-from read_stutuses_and_message_FB_AP import (
-    read_PanelAlm_one_bit,
-    read_status1_one_bit,
-    read_status2_one_bit,
-    read_PanelSig_one_bit,
-    read_PanelMode,
-    read_PanelState,
-)
-from common_wrappers import (
+from common.common_wrappers import (
     running_time,
     connect_and_close_client,
     writes_func_failed_or_passed
 )
-from wrappers_FB_AP import start_with_limits_values, reset_initial_values
+from common.encode_and_decode import decode_float
+from common.func_print_console_and_write_file import (
+    print_text_white,
+    print_title,
+    print_error,
+    print_text_grey,
+)
+from common.read_messages import read_all_messages, read_new_messages
 
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_errors_writing_registers(not_error):  # Готово.
+# Проверка ошибок при записи с отрицательными, положительными и нулевым значениями.
+def checking_errors_writing_registers(not_error):
     print_title('Проверка ошибок при записи с отрицательными, положительными и нулевым значениями.')
     for name, reg_and_vals in LEGS.items():
         register = reg_and_vals['register']
@@ -92,7 +101,8 @@ def checking_errors_writing_registers(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def cheking_on_off_for_cmdop(not_error):  # Готово.
+# Проверка работы переключателей (командой на CmdOp).
+def cheking_on_off_for_cmdop(not_error):
     print_title('Проверка работы переключателей (командой на CmdOp).')
     for name, description in SWITCHES_CMDOP.items():
         count_error = 0                                                                                                 # Максимально возможное количество ошибок.
@@ -114,7 +124,8 @@ def cheking_on_off_for_cmdop(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_generation_messages_and_msg_off(not_error):  # Готово.
+# Проверка включения и отключения режима генерации сообщений (командой на CmdOp).
+def checking_generation_messages_and_msg_off(not_error):
     print_title('Проверка включения и отключения режима генерации сообщений (командой на CmdOp).')
 
     # Убеждаемся, что генерация сообщений и аварийная уставка включены.
@@ -200,7 +211,8 @@ def checking_generation_messages_and_msg_off(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def cheking_incorrect_command_cmdop(not_error):  # Готово.
+# Проверка формирования кода 20001 при записи некорректной команды на CmdOp.
+def cheking_incorrect_command_cmdop(not_error):
     print_title('Проверка формирования кода 20001 при записи некорректной команды на CmdOp.')
     for command in [900, 949, 999]:
         reset_CmdOp()
@@ -275,7 +287,8 @@ def cheсking_on_off_AlarmOff(not_error):  # Возможно требует д�
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_operating_modes(not_error):  # Готово.
+# Проверка возможности включения режимов командой на CmdOp.
+def checking_operating_modes(not_error):
     print_title('Проверка возможности включения режимов командой на CmdOp.')
     # Создаем словарь для проверки с наименованиями команд режимов и сообщений при переходе на данные режимы.
     data = {
@@ -323,7 +336,8 @@ def checking_operating_modes(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_signal_transfer_low_level_on_middle_level(not_error):  # Готово.
+# Проверка прохождения сигнала с нижнего уровня на средний и правильности пересчета.
+def checking_signal_transfer_low_level_on_middle_level(not_error):
     print_title('Проверка прохождения сигнала с нижнего уровня на средний и правильности пересчета.')
 
     # Проходим циклом и проверяем в разных режимах.
@@ -364,7 +378,8 @@ def checking_signal_transfer_low_level_on_middle_level(not_error):  # Готов
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_write_maxEV_and_minEV(not_error):  # Готово.
+# Проверка возможности записи min/max инженерного значения.
+def checking_write_maxEV_and_minEV(not_error):
     print_title('Проверка возможности записи min/max инженерного значения.')
 
     # Создаем вспомогательные переменные со значениями для записи (minEV и maxEV).
@@ -400,7 +415,8 @@ def checking_write_maxEV_and_minEV(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_not_impossible_min_ev_more_max_ev(not_error):  # Готово.
+# Проверка невозможности записи minEV > maxEV.
+def checking_not_impossible_min_ev_more_max_ev(not_error):
     print_title('Проверка невозможности записи minEV > maxEV.')
 
     # Создаем вспомогательные переменные со значениями для записи, где minEV > maxEV.
@@ -432,7 +448,8 @@ def checking_not_impossible_min_ev_more_max_ev(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_error):  # Готово.
+# Проверка сработки ошибок канала, модуля, сенсора и внешней ошибки.
+def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_error):
     print_title('Проверка сработки ошибок канала, модуля, сенсора и внешней ошибки.')
 
     # Создаем словарь с данными для проверки. Ключи - ошибки, знач. списки значений сообщений.
@@ -541,7 +558,8 @@ def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_err
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_messages_on_off_setpoints(not_error):  # Готово.
+# Проверка наличия сообщений при включени и отключении уставок.
+def checking_messages_on_off_setpoints(not_error):
     print_title('Проверка наличия сообщений при включени и отключении уставок.')
 
     # Создаем словарь с данными для проверки. Ключи - уставки, значения - списки со значениями кодов в сообщениях.
@@ -593,7 +611,8 @@ def checking_messages_on_off_setpoints(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_setpoint_values(not_error):  # Готово.
+# Проверка правильности записи значения уставок.
+def checking_setpoint_values(not_error):
     print_title('Проверка правильности записи значения уставок.')
 
     # Т.к. значения уставок записывались декоратором reset_initial_values, то
@@ -616,6 +635,8 @@ def checking_setpoint_values(not_error):  # Готово.
 
 @reset_initial_values
 @writes_func_failed_or_passed
+# Проверка логики задачи значений максимальных и минимальных уставок и инженерных значений.
+# Например - max предупредительный порог > max аварийный порог.
 def checking_setpoint_not_impossible_min_more_max(not_error):
     print_title('Проверка логики задачи значений максимальных и минимальных уставок и инженерных значений.\n'
                 'Например - max предупредительный порог > max аварийный порог.')
@@ -700,8 +721,7 @@ def checking_SpeedLim(not_error):
 
     # Включаем SpeedLim и задаем значение ниже чем 1 в Input на нижнем уровне.
     switch_position(command='SpeedOff', required_bool_value=True)
-    SpeedLim = set_value_param(name_param='SpeedLim', number_units_of_input=1)
-    # write_holding_registers(address=LEGS['SpeedLim']['register'], values=SpeedLim)
+    set_value_param(name_param='SpeedLim', number_units_of_input=1)
 
     # Проходим циклом по всем режимам работы, включаем поочередно и тестируем работу SpeedLim.
     for mode in WORK_MODES:
@@ -924,6 +944,8 @@ def checking_work_setpoint(not_error):  # !!!!!!!!!!! НАДО ПРОВЕРИТ�
 
 @reset_initial_values
 @writes_func_failed_or_passed
+# Проверка сработки уставок при изменении значения на величину,
+# которая затрагивает сразу несколько уставок в режимах Fld, Imit и Tst.
 def checking_working_setpoint_with_large_jump(not_error):
     print_title('Проверка сработки уставок при изменении значения на величину, '
                 'которая затрагивает сразу несколько уставок в режимах Fld, Imit и Tst.')
@@ -987,7 +1009,8 @@ def checking_working_setpoint_with_large_jump(not_error):
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld(not_error):  # НУЖНО БУДЕТ ПРОВЕРИТЬ, КАК ИСПРАВЯТ ПО. Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV).
+#  Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV) в режимах Fld и Tst.
+def checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld(not_error):  # НУЖНО БУДЕТ ПРОВЕРИТЬ, КАК ИСПРАВЯТ ПО.
     print_title('Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV) \n'
                 'в режимах Fld и Tst.')
 
@@ -1086,6 +1109,7 @@ def checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld(not_error):  # �
 
 @reset_initial_values
 @writes_func_failed_or_passed
+# Проверка работоспособности квитирования. Возникновение при переходе через уставку.
 def checking_kvitir(not_error):  # ПРОВЕРКА ТОЛЬКО НА УСТАВКЕ 'THLim' ВОЗМОЖНО ТРЕБУЕТСЯ ПРОВЕРИТЬ НА ВСЕХ УСТАВКАХ.
     print_title('Проверка работоспособности квитирования. Возникновение при переходе через уставку.')
     print_error('ПРОВЕРКА ТОЛЬКО НА УСТАВКЕ "THLim" ВОЗМОЖНО ТРЕБУЕТСЯ ПРОВЕРИТЬ НА ВСЕХ УСТАВКАХ.')
@@ -1260,7 +1284,7 @@ def checking_input_in_simulation_mode(not_error):
 
 @reset_initial_values
 @writes_func_failed_or_passed
-# Проверка корректности изменения значения АП в режиме «Имитация».
+# Проверка корректности изменения значения в режиме «Имитация» при записи в Input и ImitInput.
 def checking_simulation_mode_when_change_input_and_imitinput(not_error):
     print_title('Проверка корректности изменения значения в режиме «Имитация» при записи в Input и ImitInput.')
 
@@ -1436,7 +1460,8 @@ def checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_off_messages_and_statuses_and_kvitir_in_masking_mode(not_error):  # Делаю.
+# Проверка отсутствия генерации сообщений и статусов, при режиме "Маскирование".
+def checking_off_messages_and_statuses_and_kvitir_in_masking_mode(not_error):
     print_title('Проверка отсутствия генерации сообщений и статусов, при режиме "Маскирование".')
 
     # Включаем режим "Маскирование". Читаем сообщения. Устанавливаем сигнал недостоверности.
@@ -1526,6 +1551,8 @@ def checking_work_setpoint_in_imit_mode_when_write_input(not_error):
 
 @reset_initial_values
 @writes_func_failed_or_passed
+# Проверка возможности перехода из режима "Маскирование" в другие режимы при неисправностях
+# канала, модуля, сенсора,внешней ошибки и выхода за пределы границ измерений.
 def checking_switching_between_modes_in_case_of_errors(not_error):
     print_title('Проверка возможности перехода из режима "Маскирование" в другие режимы при неисправностях \n'
                 'канала, модуля, сенсора,внешней ошибки и выхода за пределы границ измерений.')
@@ -1725,6 +1752,16 @@ def main():
     Главная функция для запуска тестов ФБ АП.
     '''
 
+    print('СТАРТОВЫЕ ПРОВЕРКИ\n')
+    checking_errors_writing_registers()
+    cheking_on_off_for_cmdop()
+    checking_generation_messages_and_msg_off()
+    cheking_incorrect_command_cmdop()
+    checking_operating_modes()
+    checking_signal_transfer_low_level_on_middle_level()
+    checking_write_maxEV_and_minEV()
+    checking_not_impossible_min_ev_more_max_ev()
+
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
     cheсking_on_off_AlarmOff()
     checking_messages_on_off_setpoints()
@@ -1747,14 +1784,6 @@ def main():
     checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
 
     print('ОБЩИЕ ПРОВЕРКИ\n')
-    checking_errors_writing_registers()
-    cheking_on_off_for_cmdop()
-    checking_generation_messages_and_msg_off()
-    cheking_incorrect_command_cmdop()
-    checking_operating_modes()
-    checking_signal_transfer_low_level_on_middle_level()
-    checking_write_maxEV_and_minEV()
-    checking_not_impossible_min_ev_more_max_ev()
     checking_work_setpoint()
     checking_working_setpoint_with_large_jump()
     checking_DeltaV()

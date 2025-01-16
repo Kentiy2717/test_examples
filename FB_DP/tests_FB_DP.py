@@ -1,28 +1,38 @@
-from itertools import combinations
 import sys
+import os
+
+# Эта строка добавляет путь к корневой директории проекта в sys.path, чтобы Python мог находить модули и пакеты,
+# расположенные в этом проекте, независимо от текущей директории запуска скрипта.
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from itertools import combinations
 from time import sleep
-from assist_function_FB_DP import check_work_kvitir_off, check_work_kvitir_on, switch_position, switch_position_for_legs, turn_on_mode
-from constants_FB_DP import BAD_REGISTER, CMDOP, CMDOP_REGISTER, INPUT_REGISTER, OUT_REGISTER, PANELMODE, PANELSIG, PANELSTATE, START_VALUE, STATUS1, STATUS2, SWITCH, VALUE_UNRELIABILITY, WORK_MODES
-from probably_not_used.constants import DETAIL_REPORT_ON
-from encode_and_decode import decode_float
-from func_print_console_and_write_file import (
-    print_text_white,
-    print_title,
-    print_error,
-    print_text_grey,
+
+from FB_DP.assist_function_FB_DP import (
+    check_work_kvitir_off,
+    check_work_kvitir_on,
+    switch_position,
+    switch_position_for_legs,
+    turn_on_mode
 )
-from common_read_and_write_functions import (
-    read_coils,
-    read_discrete_inputs,
-    this_is_write_error,
-    write_coil,
-    write_holding_register,
-    read_float,
-    write_holding_registers_int
+from FB_DP.constants_FB_DP import (
+    BAD_REGISTER,
+    CMDOP,
+    CMDOP_REGISTER,
+    INPUT_REGISTER,
+    OUT_REGISTER,
+    PANELMODE,
+    PANELSIG,
+    PANELSTATE,
+    START_VALUE,
+    STATUS1,
+    STATUS2,
+    SWITCH,
+    VALUE_UNRELIABILITY,
+    WORK_MODES
 )
-from read_and_write_functions_FB_DP import write_CmdOp
-from read_messages import read_all_messages, read_new_messages
-from read_stutuses_and_message_FB_DP import (
+from FB_DP.read_and_write_functions_FB_DP import write_CmdOp
+from FB_DP.read_stutuses_and_message_FB_DP import (
     read_PanelAlm_one_bit,
     read_status1_one_bit,
     read_status2_one_bit,
@@ -30,12 +40,28 @@ from read_stutuses_and_message_FB_DP import (
     read_PanelMode,
     read_PanelState
 )
-from common_wrappers import (
+from FB_DP.wrappers_FB_DP import reset_initial_values
+from common.constants import DETAIL_REPORT_ON
+from common.func_print_console_and_write_file import (
+    print_text_white,
+    print_title,
+    print_error,
+    print_text_grey,
+)
+from common.common_read_and_write_functions import (
+    read_discrete_inputs,
+    this_is_write_error,
+    write_coil,
+    write_holding_register,
+    read_float,
+    write_holding_registers_int
+)
+from common.read_messages import read_all_messages, read_new_messages
+from common.common_wrappers import (
     running_time,
     connect_and_close_client,
     writes_func_failed_or_passed
 )
-from wrappers_FB_DP import reset_initial_values
 
 
 @reset_initial_values
@@ -411,7 +437,8 @@ def checking_the_installation_of_commands_from_different_control_panels(not_erro
 
 @reset_initial_values
 @writes_func_failed_or_passed
-def checking_off_messages_and_statuses_and_kvitir_in_masking_mode(not_error):  # Делаю.
+# Проверка отсутствия генерации сообщений и статусов, в режиме "Маскирование".
+def checking_off_messages_and_statuses_and_kvitir_in_masking_mode(not_error):
     print_title('Проверка отсутствия генерации сообщений и статусов, в режиме "Маскирование".')
 
     # Включаем режим "Маскирование". Читаем сообщения. Устанавливаем сигнал недостоверности.
@@ -937,26 +964,6 @@ def checking_values_when_switching_modes(not_error):
     return not_error
 
 
-@reset_initial_values
-@writes_func_failed_or_passed
-def checking_(not_error):  # .
-    print_title('Проверка.')
-
-
-
-    return not_error
-
-
-@reset_initial_values
-@writes_func_failed_or_passed
-def checking_(not_error):  # .
-    print_title('Проверка.')
-
-
-
-    return not_error
-
-
 @running_time
 # @start_with_limits_values
 @connect_and_close_client
@@ -987,9 +994,6 @@ def main():
     checking_t01()
     checking_values_when_switching_modes()
     checking_switching_between_modes_in_case_of_errors()
-
-    
-    # checking_()
 
 
 if __name__ == "__main__":

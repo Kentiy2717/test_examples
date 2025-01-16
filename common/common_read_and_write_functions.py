@@ -1,7 +1,7 @@
-from probably_not_used.constants import SLAVE
-from common_wrappers import checking_the_value_for_writing, sleep_time_after_operation
+from common.constants import SLAVE
+from common.common_wrappers import checking_the_value_for_writing, sleep_time_after_operation
 
-from encode_and_decode import decode_int, encode_float, encode_int, decode_float
+from common.encode_and_decode import decode_int, encode_float, encode_int, decode_float
 from probably_not_used.TCP_Client import client
 
 

@@ -1,7 +1,7 @@
 from time import sleep
-from common_read_and_write_functions import read_holding_registers
-from constants_FB_AP import MESSAGES_START_REGISTER, MESSAGES_STOP_REGISTER
-from probably_not_used.constants import SLEEP_TIME_FOR_READ_MESSAGE
+from common.common_read_and_write_functions import read_holding_registers
+from FB_AP.constants_FB_AP import MESSAGES_START_REGISTER, MESSAGES_STOP_REGISTER
+from common.constants import SLEEP_TIME_FOR_READ_MESSAGE
 
 
 def read_all_messages():

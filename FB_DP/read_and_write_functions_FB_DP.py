@@ -1,7 +1,7 @@
 from typing import Literal
-from common_read_and_write_functions import write_holding_register
-from common_wrappers import sleep_time_after_operation
-from constants_FB_DP import CMDOP, CMDOP_REGISTER
+from common.common_read_and_write_functions import write_holding_register
+from common.common_wrappers import sleep_time_after_operation
+from FB_DP.constants_FB_DP import CMDOP, CMDOP_REGISTER
 
 
 @sleep_time_after_operation

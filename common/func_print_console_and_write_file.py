@@ -1,6 +1,6 @@
 from termcolor import cprint
 
-from probably_not_used.constants import DETAIL_REPORT_ON
+from common.constants import DETAIL_REPORT_ON
 
 count_test = 1
 

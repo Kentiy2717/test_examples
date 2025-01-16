@@ -5,8 +5,8 @@ import time
 from time import sleep
 
 from pymodbus.client import ModbusTcpClient
-from probably_not_used.constants import HOST, PORT, SLEEP_TIME_BETWEEN_OPERATIONS
-from func_print_console_and_write_file import (
+from common.constants import HOST, PORT, SLEEP_TIME_BETWEEN_OPERATIONS
+from common.func_print_console_and_write_file import (
     print_passed,
     print_text_grey_start,
     print_error,
@@ -37,7 +37,7 @@ def sleep_time_after_operation(func):
 
 def checking_the_value_for_writing(func):
     def wrapper(*args, **kwargs):
-        from common_read_and_write_functions import read_float
+        from common.common_read_and_write_functions import read_float
 
         # Извлекаем значения address, values/value и skip_error из аргументов функции.
         address = kwargs.get('address', args[0] if len(args) > 0 else None)

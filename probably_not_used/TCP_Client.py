@@ -2,8 +2,8 @@ import sys
 
 from pymodbus.client import ModbusTcpClient
 
-from probably_not_used.constants import HOST, PORT
-from func_print_console_and_write_file import print_text_grey, print_error, write_to_file
+from common.constants import HOST, PORT
+from common.func_print_console_and_write_file import print_text_grey, print_error, write_to_file
 
 
 client = ModbusTcpClient(host=HOST, port=PORT)

@@ -1,6 +1,6 @@
-from constants_FB_DPcc import PANEL_ALM_REGISTER, PANEL_MODE_REGISTER, PANEL_SIG_REGISTER, PANEL_STATE_REGISTER, STATUS1_REGISTER, STATUS2_REGISTER
-from encode_and_decode import decoder_bits
-from common_read_and_write_functions import (
+from FB_DPcc.constants_FB_DPcc import PANEL_ALM_REGISTER, PANEL_MODE_REGISTER, PANEL_SIG_REGISTER, PANEL_STATE_REGISTER, STATUS1_REGISTER, STATUS2_REGISTER
+from common.encode_and_decode import decoder_bits
+from common.common_read_and_write_functions import (
     write_holding_registers,
     read_holding_registers
 )

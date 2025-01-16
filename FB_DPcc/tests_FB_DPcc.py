@@ -1,16 +1,26 @@
+import sys
+import os
+
+# Эта строка добавляет путь к корневой директории проекта в sys.path, чтобы Python мог находить модули и пакеты,
+# расположенные в этом проекте, независимо от текущей директории запуска скрипта.
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from itertools import combinations
 from time import sleep
-from assist_function_FB_DPcc import check_work_kvitir_off, check_work_kvitir_on, switch_position, switch_position_for_legs, turn_on_mode
-from constants_FB_DPcc import AH_ACT, BAD_REGISTER, CMDOP, CMDOP_REGISTER, INPUT_REGISTER, OUT_REGISTER, PANELMODE, PANELSIG, PANELSTATE, START_VALUE, STATUS1, STATUS2, SWITCH, VALUE_UNRELIABILITY, WH_ACT, WORK_MODES
-from probably_not_used.constants import DETAIL_REPORT_ON
-from func_print_console_and_write_file import (
+
+from common.constants import DETAIL_REPORT_ON
+from common.common_wrappers import (
+    running_time,
+    connect_and_close_client,
+    writes_func_failed_or_passed
+)
+from common.func_print_console_and_write_file import (
     print_text_white,
     print_title,
     print_error,
     print_text_grey,
 )
-from common_read_and_write_functions import (
-    read_coils,
+from common.common_read_and_write_functions import (
     read_discrete_inputs,
     this_is_write_error,
     write_coil,
@@ -19,15 +29,42 @@ from common_read_and_write_functions import (
     write_holding_registers,
     write_holding_registers_int
 )
-from read_and_write_functions_FB_DPcc import write_CmdOp
-from read_messages import read_all_messages, read_new_messages
-from common_wrappers import (
-    running_time,
-    connect_and_close_client,
-    writes_func_failed_or_passed
+from common.read_messages import read_all_messages, read_new_messages
+from FB_DPcc.assist_function_FB_DPcc import (
+    check_work_kvitir_off,
+    check_work_kvitir_on,
+    switch_position,
+    switch_position_for_legs,
+    turn_on_mode
 )
-from read_stutuses_and_message_FB_DPcc import read_PanelAlm_one_bit, read_PanelMode, read_PanelSig_one_bit, read_PanelState, read_status1_one_bit, read_status2_one_bit
-from wrappers_FB_DPcc import reset_initial_values
+from FB_DPcc.constants_FB_DPcc import (
+    AH_ACT,
+    BAD_REGISTER,
+    CMDOP,
+    CMDOP_REGISTER,
+    INPUT_REGISTER,
+    OUT_REGISTER,
+    PANELMODE,
+    PANELSIG,
+    PANELSTATE,
+    START_VALUE,
+    STATUS1,
+    STATUS2,
+    SWITCH,
+    VALUE_UNRELIABILITY,
+    WH_ACT,
+    WORK_MODES
+)
+from FB_DPcc.read_and_write_functions_FB_DPcc import write_CmdOp
+from FB_DPcc.read_stutuses_and_message_FB_DPcc import (
+    read_PanelAlm_one_bit,
+    read_PanelMode,
+    read_PanelSig_one_bit,
+    read_PanelState,
+    read_status1_one_bit,
+    read_status2_one_bit
+)
+from FB_DPcc.wrappers_FB_DPcc import reset_initial_values
 
 
 @reset_initial_values
@@ -574,6 +611,7 @@ def checking_errors_channel_module_sensor_and_external_error_fld_and_tst(not_err
 
 @reset_initial_values
 @writes_func_failed_or_passed
+# Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV) в режимах Fld и Tst.
 def checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld(not_error):  # НУЖНО БУДЕТ ПРОВЕРИТЬ, КАК ИСПРАВЯТ ПО. Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV).
     print_title('Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV) \n'
                 'в режимах Fld и Tst.')
@@ -1040,6 +1078,7 @@ def checking_setpoint_values(not_error):
 
 @reset_initial_values
 @writes_func_failed_or_passed
+# Проверка невозможности задачи max предупредительный порог > max аварийный порог.
 def checking_setpoint_not_impossible_min_more_max(not_error):
     print_title('Проверка невозможности задачи max предупредительный порог > max аварийный порог.')
 
@@ -1390,6 +1429,8 @@ def checking_work_setpoint(not_error):  # !!!!!!!!!!! НАДО ПРОВЕРИТ�
 
 @reset_initial_values
 @writes_func_failed_or_passed
+# Проверка сработки уставок при изменении значения на величину,
+# которая затрагивает сразу несколько уставок в режимах Fld, Imt2, Imt1 и Tst.
 def checking_working_setpoint_with_large_jump(not_error):
     print_title('Проверка сработки уставок при изменении значения на величину, '
                 'которая затрагивает сразу несколько уставок в режимах Fld, Imt2, Imt1 и Tst.')
@@ -1441,8 +1482,6 @@ def checking_working_setpoint_with_large_jump(not_error):
     return not_error
 
 
-
-
 @running_time
 # @start_with_limits_values
 @connect_and_close_client
@@ -1482,8 +1521,6 @@ def main():
     checking_work_setpoint()
     checking_working_setpoint_with_large_jump()
     checking_switching_between_modes_in_case_of_errors()
-
-    # checking_()
 
 
 if __name__ == "__main__":

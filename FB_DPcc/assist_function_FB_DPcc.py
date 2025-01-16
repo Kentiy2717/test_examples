@@ -1,14 +1,14 @@
 from typing import Literal
 
-from common_read_and_write_functions import this_is_write_error, write_holding_register
-from constants_FB_DP import CMDOP, CMDOP_REGISTER, PANELSIG, START_VALUE, STATUS1
-from func_print_console_and_write_file import print_error, print_text_grey
-from read_and_write_functions_FB_DP import reset_CmdOp, write_CmdOp
-from read_messages import read_new_messages
-from read_stutuses_and_message_FB_DP import read_PanelSig_one_bit, read_status1_one_bit
+from common.common_read_and_write_functions import this_is_write_error, write_holding_register, write_holding_registers
+from FB_DPcc.constants_FB_DPcc import CMDOP, CMDOP_REGISTER, PANELSIG, START_VALUE, STATUS1
+from common.func_print_console_and_write_file import print_error, print_text_grey
+from FB_DPcc.read_and_write_functions_FB_DPcc import reset_CmdOp, write_CmdOp
+from common.read_messages import read_new_messages
+from FB_DPcc.read_stutuses_and_message_FB_DPcc import read_PanelSig_one_bit, read_status1_one_bit
 
 
-def switch_position(command: Literal['Invers', 'MsgOff'],
+def switch_position(command: Literal['MsgOff', 'WHLimEn', 'AHLimEn'],
                     required_bool_value: bool):
     '''!!!! Командой на CmdOp !!!!!'''
     reset_CmdOp()
@@ -18,11 +18,11 @@ def switch_position(command: Literal['Invers', 'MsgOff'],
             print_error(f'Ошибка выполнения команды {command} на СmdOp')
 
 
-def turn_on_mode(mode: Literal['Oos', 'Imt1', 'Imt0', 'Fld', 'Tst']):
+def turn_on_mode(mode: Literal['Oos', 'Imt2', 'Imt1', 'Imt0', 'Fld', 'Tst'], not_error):
     '''
     Включает необходимый режим если он еще не включен:\n
-    'Oos' - Маскирование, 'Imt1' - Имитация 1, 'Imt0' - Имитация 0,\n
-    'Fld' - Полевая обработка, 'Tst' - Тестирование.\n
+    'Oos' - Маскирование, 'Fld' - Полевая обработка, 'Tst' - Тестирование,\n
+    'Imt2' - Имитация 1, 'Imt1' - Имитация 1, 'Imt0' - Имитация 0.\n
     !!!!! Возвращает False, если включить не удалось. !!!!!
     '''
 
@@ -31,11 +31,10 @@ def turn_on_mode(mode: Literal['Oos', 'Imt1', 'Imt0', 'Fld', 'Tst']):
         write_CmdOp(command=mode)
 
     # Возвращаем False и сообщение об ощибки, если включить не удалось.
-    if read_status1_one_bit(number_bit=STATUS1[mode]) is True:
-        return True
-    else:
+    if read_status1_one_bit(number_bit=STATUS1[mode]) is False:
+        not_error = False
         print_error(f'Ошибка! Не удалось включить режим {mode}. Дальнейшее тестирование нецелесообразно.')
-        return False
+    return not_error
 
 
 def check_st1_PanelSig_new_msg(number_bit_st1, number_bit_PanelSig, old_messages):
@@ -92,7 +91,7 @@ def check_work_kvitir_off(old_messages, not_error, msg):
 
 
 def switch_position_for_legs(required_bool_value: Literal[True, False],
-                             command: Literal['ChFlt', 'ModFlt', 'SensFlt', 'ExtFlt']):
+                             command: Literal['Alarm_Off', 'ChFlt', 'ModFlt', 'SensFlt', 'ExtFlt']):
     # Зиписываем в цикле на нужную ножку значение 3 раза попеременно меняя его.
     # Это связано с особенностями перезаписи этих ножек после ребута ПЛК.
     for _ in range(0, 3):

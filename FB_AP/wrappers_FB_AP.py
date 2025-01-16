@@ -1,12 +1,12 @@
-from probably_not_used.constants import START_LIMIT, START_LIMIT_VALUE
-from func_print_console_and_write_file import print_error
-from constants_FB_AP import START_VALUE
+from common.constants import START_LIMIT, START_LIMIT_VALUE
+from common.func_print_console_and_write_file import print_error
+from FB_AP.constants_FB_AP import START_VALUE
 
 
 def reset_initial_values(func):
     def wrapper(*args, **kwargs):
-        from common_read_and_write_functions import this_is_write_error
-        from assist_function_FB_AP import switch_position
+        from common.common_read_and_write_functions import this_is_write_error
+        from FB_AP.assist_function_FB_AP import switch_position
         for name, reg_and_val in START_VALUE.items():
             if this_is_write_error(address=reg_and_val['register'], value=reg_and_val['pre_values']) is True:
                 print_error(f'Ошибка записи предварительного значения на ножку {name}')
@@ -27,7 +27,7 @@ def reset_initial_values(func):
 
 def start_with_limits_values(func):
     def wrapper(*args, **kwargs):
-        from common_read_and_write_functions import this_is_write_error
+        from common.common_read_and_write_functions import this_is_write_error
         if START_LIMIT is True:
             for name, reg_and_val in START_VALUE.items():
                 if this_is_write_error(address=reg_and_val['register'], value=START_LIMIT_VALUE) is True:
