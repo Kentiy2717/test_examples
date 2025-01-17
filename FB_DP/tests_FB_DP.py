@@ -5,6 +5,11 @@ import os
 # расположенные в этом проекте, независимо от текущей директории запуска скрипта.
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
+# Включаем поддержку ANSI escape-последовательностей в консоли Windows
+if sys.platform == "win32":
+    os.system("")
+
 from itertools import combinations
 from time import sleep
 
@@ -969,8 +974,10 @@ def checking_values_when_switching_modes(not_error):
 @connect_and_close_client
 def main():
     '''
-    Главная функция для запуска тестов ФБ АП.
+    Главная функция для запуска тестов ФБ DP.
     '''
+
+    print('СТАРТ ТЕСТИРОВАНИЯ ФБ DP\n')
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
     checking_kvitir()

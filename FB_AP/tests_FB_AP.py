@@ -1752,6 +1752,8 @@ def main():
     Главная функция для запуска тестов ФБ АП.
     '''
 
+    print('СТАРТ ТЕСТИРОВАНИЯ ФБ AP\n')
+
     print('СТАРТОВЫЕ ПРОВЕРКИ\n')
     checking_errors_writing_registers()
     cheking_on_off_for_cmdop()

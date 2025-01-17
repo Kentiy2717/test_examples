@@ -1487,8 +1487,10 @@ def checking_working_setpoint_with_large_jump(not_error):
 @connect_and_close_client
 def main():
     '''
-    Главная функция для запуска тестов ФБ АП.
+    Главная функция для запуска тестов ФБ DPcc.
     '''
+
+    print('СТАРТ ТЕСТИРОВАНИЯ ФБ DPcc\n')
 
     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
     checking_errors_writing_registers()

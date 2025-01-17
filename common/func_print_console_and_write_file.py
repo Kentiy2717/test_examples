@@ -18,7 +18,7 @@ def write_to_file_num(count_test):
 def print_title(message):
     global count_test
     print('_____________________________________________________\n')
-    cprint(f'{count_test})', end=' ', color='grey')
+    cprint(f'{count_test})', end=' ', color='dark_grey')
     cprint(message, color='yellow', attrs=['underline'])
     write_to_file_num(count_test)
     count_test += 1
@@ -44,12 +44,12 @@ def print_passed(message):
 
 def print_text_grey(message):
     if DETAIL_REPORT_ON is True:
-        cprint(message, color='grey')
+        cprint(message, color='dark_grey')
         write_to_file(message)
 
 
 def print_text_grey_start(message):
-    cprint(message, color='grey')
+    cprint(message, color='dark_grey')
     write_to_file(message)
 
 
