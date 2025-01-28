@@ -38,11 +38,9 @@ from FB_VLV.assist_function_FB_VLV import (
     turn_on_mode
 )
 from FB_VLV.constants_FB_VLV import (
-    AH_ACT,
     BAD_REGISTER,
     CMDOP,
     CMDOP_REGISTER,
-    INPUT_REGISTER,
     OUT_REGISTER,
     PANELMODE,
     PANELSIG,
@@ -50,9 +48,7 @@ from FB_VLV.constants_FB_VLV import (
     START_VALUE,
     STATUS1,
     STATUS2,
-    SWITCH,
     VALUE_UNRELIABILITY,
-    WH_ACT,
     WORK_MODES
 )
 from FB_VLV.read_and_write_functions_FB_VLV import write_CmdOp
@@ -69,10 +65,14 @@ from FB_VLV.wrappers_FB_VLV import reset_initial_values
 
 @reset_initial_values
 @writes_func_failed_or_passed
-# 
+# Проверка правильности переложения SetPos, AutSet и INPos в Out, VUSetPos b VUPos в режимах "Дистанция" и "Авто",
+# а также при включении режима имитация.
 def checking_(not_error):
-    print_title('Проверка .')
+    print_title('Проверка правильности переложения SetPos, AutSet и INPos в '
+                'Out, VUSetPos и VUPos в режимах "Дистанция" и "Авто", а также при включении режима имитация.')
 
+    # Проверяем в цикле сначала режим "Дистанция", затем "Авто"
+    for mode in ()
     
     return not_error
 

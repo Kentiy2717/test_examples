@@ -13,14 +13,14 @@ if sys.platform == "win32":
 from itertools import combinations
 from time import sleep
 
-from FB_DP.assist_function_FB_DP import (
+from assist_function_FB_DP import (
     check_work_kvitir_off,
     check_work_kvitir_on,
     switch_position,
     switch_position_for_legs,
     turn_on_mode
 )
-from FB_DP.constants_FB_DP import (
+from constants_FB_DP import (
     BAD_REGISTER,
     CMDOP,
     CMDOP_REGISTER,
@@ -36,8 +36,8 @@ from FB_DP.constants_FB_DP import (
     VALUE_UNRELIABILITY,
     WORK_MODES
 )
-from FB_DP.read_and_write_functions_FB_DP import write_CmdOp
-from FB_DP.read_stutuses_and_message_FB_DP import (
+from read_and_write_functions_FB_DP import write_CmdOp
+from read_stutuses_and_message_FB_DP import (
     read_PanelAlm_one_bit,
     read_status1_one_bit,
     read_status2_one_bit,
@@ -45,9 +45,10 @@ from FB_DP.read_stutuses_and_message_FB_DP import (
     read_PanelMode,
     read_PanelState
 )
-from FB_DP.wrappers_FB_DP import reset_initial_values
+from wrappers_FB_DP import reset_initial_values
 from common.constants import DETAIL_REPORT_ON
 from common.func_print_console_and_write_file import (
+    print_passed,
     print_text_white,
     print_title,
     print_error,
@@ -552,7 +553,7 @@ def checking_kvitir(not_error):
 @reset_initial_values
 @writes_func_failed_or_passed
 # Проверка корректности значений в режиме «Имитация 1» и «Имитация 0» при изменении в Input и включения инверсии.
-def checking_checking_imit1_and_imit0(not_error):
+def checking_imit1_and_imit0(not_error):
     print_title('Проверка корректности значений в режиме «Имитация 1» и «Имитация 0» '
                 'при изменении в Input и включения инверсии.')
 
@@ -969,39 +970,81 @@ def checking_values_when_switching_modes(not_error):
     return not_error
 
 
+test_functions = {
+    'Проверка работоспособности квитирования. Возникновение при переходе через уставку.': checking_kvitir,
+    'Проверка корректности значений в режиме «Имитация 1» и «Имитация 0» при изменении в Input и включения инверсии.': checking_imit1_and_imit0,
+    'Проверка отсутствия генерации сообщений и статусов, в режиме "Маскирование".': checking_off_messages_and_statuses_and_kvitir_in_masking_mode,
+    'Проверка ошибок при записи c нулевым и положительными значениями(отрицательные не предусмотрены, так как UINT).': checking_errors_writing_registers,
+    'Проверка работы переключателей (командой на CmdOp).': cheking_on_off_for_cmdop,
+    'Проверка включения и отключения режима генерации сообщений (командой на CmdOp).': checking_generation_messages_and_msg_off,
+    'Проверка формирования кода 20001 при записи некорректной команды на CmdOp.': cheking_incorrect_command_cmdop,
+    'Проверка возможности включения режимов командой на CmdOp.': checking_operating_modes,
+    'Проверка прохождения сигнала с нижнего уровня на средний с инверсией и без на разных режимах.': checking_signal_transfer_low_level_on_middle_level_and_invers,
+    'Проверка установки команд с разных панелей управления.': checking_the_installation_of_commands_from_different_control_panels,
+    'Проверка на непрохождении сигнала недостоверности значения DP при неисправности модуля, канала, датчика и внешней ошибке в режимах "Имитация1", "Имитация0", "Маскирование".': checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking,
+    'Проверка сработки ошибок канала, модуля, сенсора и внешней ошибки.': checking_errors_channel_module_sensor_and_external_error_fld_and_tst,
+    'Проверка задержки на срабатывание в режимах Fld, Tst, Imit.': checking_t01,
+    'Проверка неизменности значений Period, T01, а также сохранения положения переключателей (MsgOff, Invers) при переключениях между режимами.': checking_values_when_switching_modes,
+    'Проверка возможности перехода из режима "Маскирование" в другие режимы при неисправностях канала, модуля, сенсора,внешней ошибки.': checking_switching_between_modes_in_case_of_errors
+}
+
+
 @running_time
 # @start_with_limits_values
 @connect_and_close_client
-def main():
+def main(selected_functions=None, lock=None):
     '''
     Главная функция для запуска тестов ФБ DP.
     '''
+    print_text_white('СТАРТ ТЕСТИРОВАНИЯ ФБ DP\n')
 
-    print('СТАРТ ТЕСТИРОВАНИЯ ФБ DP\n')
+    if selected_functions is None:
+        for func in test_functions.values():
+            func()
+    else:
+        for description in selected_functions:
+            test_functions[description]()
 
-    print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    checking_kvitir()
-
-    print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-    checking_checking_imit1_and_imit0()
-
-    print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
-
-    print('ОБЩИЕ ПРОВЕРКИ\n')
-    checking_errors_writing_registers()
-    cheking_on_off_for_cmdop()
-    checking_generation_messages_and_msg_off()
-    cheking_incorrect_command_cmdop()
-    checking_operating_modes()
-    checking_signal_transfer_low_level_on_middle_level_and_invers()
-    checking_the_installation_of_commands_from_different_control_panels()
-    checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
-    checking_t01()
-    checking_values_when_switching_modes()
-    checking_switching_between_modes_in_case_of_errors()
+    print_passed('ТЕСТИРОВАНИЕ ФБ DP ОКОНЧЕНО\n')
 
 
 if __name__ == "__main__":
-    main()
+    main(test_functions)
+
+
+# @running_time
+# # @start_with_limits_values
+# @connect_and_close_client
+# def main():
+#     '''
+#     Главная функция для запуска тестов ФБ DP.
+#     '''
+# 
+#     print('СТАРТ ТЕСТИРОВАНИЯ ФБ DP\n')
+# 
+#     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
+#     checking_kvitir()
+# 
+#     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
+#     checking_checking_imit1_and_imit0()
+# 
+#     print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
+#     checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+# 
+#     print('ОБЩИЕ ПРОВЕРКИ\n')
+#     checking_errors_writing_registers()
+#     cheking_on_off_for_cmdop()
+#     checking_generation_messages_and_msg_off()
+#     cheking_incorrect_command_cmdop()
+#     checking_operating_modes()
+#     checking_signal_transfer_low_level_on_middle_level_and_invers()
+#     checking_the_installation_of_commands_from_different_control_panels()
+#     checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
+#     checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
+#     checking_t01()
+#     checking_values_when_switching_modes()
+#     checking_switching_between_modes_in_case_of_errors()
+# 
+# 
+# if __name__ == "__main__":
+#     main()

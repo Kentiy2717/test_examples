@@ -70,6 +70,7 @@ from common.common_wrappers import (
 )
 from common.encode_and_decode import decode_float
 from common.func_print_console_and_write_file import (
+    print_passed,
     print_text_white,
     print_title,
     print_error,
@@ -1744,56 +1745,111 @@ def checking_t01(not_error):
     return not_error
 
 
+test_functions = {
+    'Проверка ошибок при записи с отрицательными, положительными и нулевым значениями.': checking_errors_writing_registers,
+    'Проверка работы переключателей (командой на CmdOp).': cheking_on_off_for_cmdop,
+    'Проверка включения и отключения режима генерации сообщений (командой на CmdOp).': checking_generation_messages_and_msg_off,
+    'Проверка формирования кода 20001 при записи некорректной команды на CmdOp.': cheking_incorrect_command_cmdop,
+    'Проверка работоспособности AlarmOff.': cheсking_on_off_AlarmOff,
+    'Проверка возможности включения режимов командой на CmdOp.': checking_operating_modes,
+    'Проверка прохождения сигнала с нижнего уровня на средний и правильности пересчета.': checking_signal_transfer_low_level_on_middle_level,
+    'Проверка возможности записи min/max инженерного значения.': checking_write_maxEV_and_minEV,
+    ' Проверка невозможности записи minEV > maxEV.': checking_not_impossible_min_ev_more_max_ev,
+    'Проверка сработки ошибок канала, модуля, сенсора и внешней ошибки.': checking_errors_channel_module_sensor_and_external_error_fld_and_tst,
+    'Проверка наличия сообщений при включени и отключении уставок.': checking_messages_on_off_setpoints,
+    'Проверка правильности записи значения уставок.': checking_setpoint_values,
+    'Проверка логики задачи значений максимальных и минимальных уставок и инженерных значений. Например - max предупредительный порог > max аварийный порог.': checking_setpoint_not_impossible_min_more_max,
+    'Проверка работы DeltaV при изменение Input.': checking_DeltaV,
+    'Проверка работы SpeedLim в во всех режимах работы.': checking_SpeedLim,
+    'Проверка сработки уставок при режиме во всех режимах работы.': checking_work_setpoint,
+    'Проверка сработки уставок при изменении значения на величину, которая затрагивает сразу несколько уставок в режимах Fld, Imit и Tst.': checking_working_setpoint_with_large_jump,
+    'Проверка сработки/несработки выхода за пределы инженерных значений (MinEV и MaxEV) в режимах Fld и Tst.': checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld,
+    'Проверка работоспособности квитирования. Возникновение при переходе через уставку.': checking_kvitir,
+    'Проверка возможности включения режима "Имитация".': checking_simulation_mode_turn_on,
+    'Проверка неизменности значений DeltaV, Period, ImitInput, MaxEV, MinEV, T01, SpeedLim и т.д, а также сохранения положения переключателей при переключениях между режимами.': checking_values_when_switching_modes,
+    'Проверка переключения значения АП с Input на ImitInput при переключении с режимов "Полевая обработка", "Тестирование", "Маскирование" на режим "Имитация" и обратно.': checking_input_in_simulation_mode,
+    'Проверка корректности изменения значения в режиме «Имитация» при записи в Input и ImitInput.': checking_simulation_mode_when_change_input_and_imitinput,
+    'Проверка на непрохождении сигнала недостоверности значения АП при выходе Input за пределы MinEV и MaxEV.': checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos,
+    'Проверка на непрохождении сигнала недостоверности значения АП при неисправности модуля, канала, датчика и внешней ошибке в режимах "Имитация", "Маскирование".': checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking,
+    'Проверка отсутствия генерации сообщений и статусов, при режиме "Маскирование".': checking_off_messages_and_statuses_and_kvitir_in_masking_mode,
+    'Проверка несработки уставок при изменении значения в Input в режиме "Имитация".': checking_work_setpoint_in_imit_mode_when_write_input,
+    'Проверка возможности перехода из режима "Маскирование" в другие режимы при неисправностях канала, модуля, сенсора,внешней ошибки и выхода за пределы границ измерений.': checking_switching_between_modes_in_case_of_errors,
+    'Проверка установки команд с разных панелей управления.': checking_the_installation_of_commands_from_different_control_panels,
+    'Проверка задержки на срабатывание в режимах Fld, Tst, Imit.': checking_t01,
+}
+
+
 @running_time
-@start_with_limits_values
+# @start_with_limits_values
 @connect_and_close_client
-def main():
-    '''
-    Главная функция для запуска тестов ФБ АП.
-    '''
+def main(selected_functions=None):
+    """Главная функция для запуска тестов ФБ AP."""
+    print_text_white('СТАРТ ТЕСТИРОВАНИЯ ФБ AP\n')
 
-    print('СТАРТ ТЕСТИРОВАНИЯ ФБ AP\n')
+    if selected_functions is None:
+        for func in test_functions.values():
+            func()
+    else:
+        for description in selected_functions:
+            test_functions[description]()
 
-    print('СТАРТОВЫЕ ПРОВЕРКИ\n')
-    checking_errors_writing_registers()
-    cheking_on_off_for_cmdop()
-    checking_generation_messages_and_msg_off()
-    cheking_incorrect_command_cmdop()
-    checking_operating_modes()
-    checking_signal_transfer_low_level_on_middle_level()
-    checking_write_maxEV_and_minEV()
-    checking_not_impossible_min_ev_more_max_ev()
-
-    print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-    cheсking_on_off_AlarmOff()
-    checking_messages_on_off_setpoints()
-    checking_setpoint_values()
-    checking_setpoint_not_impossible_min_more_max()
-    checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
-    checking_kvitir()
-    checking_the_installation_of_commands_from_different_control_panels()
-
-    print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-    checking_simulation_mode_turn_on()
-    checking_values_when_switching_modes()
-    checking_input_in_simulation_mode()
-    checking_simulation_mode_when_change_input_and_imitinput()
-    checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
-    checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
-    checking_work_setpoint_in_imit_mode_when_write_input()
-
-    print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-    checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
-
-    print('ОБЩИЕ ПРОВЕРКИ\n')
-    checking_work_setpoint()
-    checking_working_setpoint_with_large_jump()
-    checking_DeltaV()
-    checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
-    checking_SpeedLim()
-    checking_t01()
-    checking_switching_between_modes_in_case_of_errors()
+    print_passed('ТЕСТИРОВАНИЕ ФБ AP ОКОНЧЕНО\n')
 
 
 if __name__ == "__main__":
-    main()
+    main(test_functions)
+
+
+# @running_time
+# @start_with_limits_values
+# @connect_and_close_client
+# def main():
+#     '''
+#     Главная функция для запуска тестов ФБ АП.
+#     '''
+# 
+#     print('СТАРТ ТЕСТИРОВАНИЯ ФБ AP\n')
+# 
+#     print('СТАРТОВЫЕ ПРОВЕРКИ\n')
+#     checking_errors_writing_registers()
+#     cheking_on_off_for_cmdop()
+#     checking_generation_messages_and_msg_off()
+#     cheking_incorrect_command_cmdop()
+#     checking_operating_modes()
+#     checking_signal_transfer_low_level_on_middle_level()
+#     checking_write_maxEV_and_minEV()
+#     checking_not_impossible_min_ev_more_max_ev()
+# 
+#     print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
+#     cheсking_on_off_AlarmOff()
+#     checking_messages_on_off_setpoints()
+#     checking_setpoint_values()
+#     checking_setpoint_not_impossible_min_more_max()
+#     checking_work_at_out_in_range_min_ev_and_max_ev_tst_and_fld()
+#     checking_kvitir()
+#     checking_the_installation_of_commands_from_different_control_panels()
+# 
+#     print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
+#     checking_simulation_mode_turn_on()
+#     checking_values_when_switching_modes()
+#     checking_input_in_simulation_mode()
+#     checking_simulation_mode_when_change_input_and_imitinput()
+#     checking_absence_unreliability_value_min_ev_and_max_ev_in_imit_and_oos()
+#     checking_errors_channel_module_sensor_and_external_error_in_simulation_mode_and_masking()
+#     checking_work_setpoint_in_imit_mode_when_write_input()
+# 
+#     print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
+#     checking_off_messages_and_statuses_and_kvitir_in_masking_mode()
+# 
+#     print('ОБЩИЕ ПРОВЕРКИ\n')
+#     checking_work_setpoint()
+#     checking_working_setpoint_with_large_jump()
+#     checking_DeltaV()
+#     checking_errors_channel_module_sensor_and_external_error_fld_and_tst()
+#     checking_SpeedLim()
+#     checking_t01()
+#     checking_switching_between_modes_in_case_of_errors()
+# 
+# 
+# if __name__ == "__main__":
+#     main()

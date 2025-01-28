@@ -1,48 +1,35 @@
-import threading
-from time import sleep
+import sys
+import os
 
-from probably_not_used.TCP_Client import connect_client, close_client, client
-from common.encode_and_decode import (encode_float,
-                             decode_float,
-                             encode_int,
-                             decode_int,
-                             decoder_bits,
-                             )
-from FB_DP.read_and_write_functions_FB_DP import write_CmdOp
-from common.read_messages import read_all_messages, read_new_messages
-from FB_AP.wrappers_FB_AP import reset_initial_values
-# sleep(5)
+# Эта строка добавляет путь к корневой директории проекта в sys.path, чтобы Python мог находить модули и пакеты,
+# расположенные в этом проекте, независимо от текущей директории запуска скрипта.
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common.common_read_and_write_functions import (
-    read_discrete_inputs,
-    read_int,
-    write_holding_registers,
-    write_holding_register,
-    read_holding_registers,
-    this_is_write_error,
     read_coils,
+    read_discrete_inputs,
+    this_is_write_error,
     write_coil,
-    read_float
+    write_holding_register,
+    write_holding_registers,
+    read_holding_registers,
+    read_float,
+    write_holding_registers_int
 )
-from FB_AP.read_stutuses_and_message_FB_AP import (
-    read_PanelSig_one_bit,
-    read_status1_one_bit,
-    read_PanelMode,
-    read_PanelState,
-    read_PanelAlm_one_bit,
-    read_status2_one_bit
-)
-from FB_DP.constants_FB_DP import (
-    INPUT_REGISTER,
-    OUT_REGISTER,
-    PANEL_STATE_REGISTER,
-    STATUS1
-)
-from FB_AP.assist_function_FB_AP import switch_position, reset_CmdOp, switch_position_for_legs, turn_on_mode
+from probably_not_used.TCP_Client import close_client, connect_client
+
+
 connect_client()
 
 # write_coil(address=40122, value=1, slave=1)
 # write_coil(address=40121, value=1, slave=1)
-print(read_float(address=18060))
-print(write_holding_registers(address=18060, values=15).isError())
+# write_coil(address=40136, value=1, slave=1)
+# write_coil(address=40137, value=1, slave=1)
+write_holding_register(address=11800, value=9)
+# write_coil(address=40137, value=0, slave=1)
+print(read_coils(address=40136).bits)
+print(read_coils(address=40137).bits)
+# write_holding_registers(address=40126, values=0, slave=1)
+# write_holding_registers(address=40127, values=0, slave=1)
+
 
 close_client()
