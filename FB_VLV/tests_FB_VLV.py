@@ -15,6 +15,7 @@ from common.common_wrappers import (
     writes_func_failed_or_passed
 )
 from common.func_print_console_and_write_file import (
+    print_passed,
     print_text_white,
     print_title,
     print_error,
@@ -48,6 +49,7 @@ from FB_VLV.constants_FB_VLV import (
     START_VALUE,
     STATUS1,
     STATUS2,
+    SWITCH,
     VALUE_UNRELIABILITY,
     WORK_MODES
 )
@@ -65,6 +67,38 @@ from FB_VLV.wrappers_FB_VLV import reset_initial_values
 
 @reset_initial_values
 @writes_func_failed_or_passed
+# Проверка работы переключателей (командой на CmdOp).
+def cheking_on_off_for_cmdop(not_error):
+    print_title('Проверка работы переключателей (командой на CmdOp).')
+
+    # Проходим циклом по всем переключателям. Пытаемся включить и выключить каждый 4 раза.
+    for command in SWITCH:
+        required_bool_value = True
+        count_error = 0
+        for iter in range(4):
+
+            # Читаем Status1 и PanelSig и запоминаем значение переключателя.
+            st1_before = read_status1_one_bit(number_bit=STATUS1[command])
+            PanelSig_before = read_PanelSig_one_bit(number_bit=PANELSIG[command])
+            switch_position(command=command, required_bool_value=required_bool_value)
+
+            # Если видем в статусе или панели, не поменялось значение, то ошибка.
+            if (
+                st1_before == read_status1_one_bit(number_bit=STATUS1[command])                                             # Если видем в статусе и панели, что не поменялось значение, то ошибка
+                or PanelSig_before == read_PanelSig_one_bit(number_bit=PANELSIG[command])
+            ):
+                print_error(f'Команда {command} не сработала на {iter} итерации.')
+                not_error = False
+                count_error += 1
+
+            # Переключаем значение. Если счетчик ошибок нулевой, то выводим сообщение.
+            required_bool_value = not required_bool_value
+        print_text_grey(f'Переключатель {command} работет исправно.') if count_error == 0 else None         # Если все итерации прошли успешно, то выдаем сообщение.
+    return not_error
+
+
+@reset_initial_values
+@writes_func_failed_or_passed
 # Проверка правильности переложения SetPos, AutSet и INPos в Out, VUSetPos b VUPos в режимах "Дистанция" и "Авто",
 # а также при включении режима имитация.
 def checking_(not_error):
@@ -72,29 +106,36 @@ def checking_(not_error):
                 'Out, VUSetPos и VUPos в режимах "Дистанция" и "Авто", а также при включении режима имитация.')
 
     # Проверяем в цикле сначала режим "Дистанция", затем "Авто"
-    for mode in ()
+    for mode in ('Man', 'Auto'):
+        pass
     
     return not_error
+
+
+test_functions = { 
+    'Проверка работы переключателей (командой на CmdOp).': cheking_on_off_for_cmdop,
+    'checking_': checking_,
+}
 
 
 @running_time
 # @start_with_limits_values
 @connect_and_close_client
-def main():
+def main(selected_functions=None, lock=None):
     '''
-    Главная функция для запуска тестов ФБ VLV.
+    Главная функция для запуска тестов ФБ DP.
     '''
+    print_text_white('СТАРТ ТЕСТИРОВАНИЯ ФБ DP\n')
 
-    print('СТАРТ ТЕСТИРОВАНИЯ ФБ VLV\n')
+    if selected_functions is None:
+        for func in test_functions.values():
+            func()
+    else:
+        for description in selected_functions:
+            test_functions[description]()
 
-    print('ПРОВЕРКА РЕЖИМА "ПОЛЕВАЯ ОБРАБОТКА"\n')
-
-    print('ПРОВЕРКА РЕЖИМА "ИМИТАЦИЯ"\n')
-
-    print('ПРОВЕРКА РЕЖИМА "МАСКИРОВАНИЕ"\n')
-
-    print('ОБЩИЕ ПРОВЕРКИ\n')
+    print_passed('ТЕСТИРОВАНИЕ ФБ DP ОКОНЧЕНО\n')
 
 
 if __name__ == "__main__":
-    main()
+    main(test_functions)

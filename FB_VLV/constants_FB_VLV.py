@@ -5,8 +5,8 @@ START_VALUE = {
     'Tmp':         {'register': 11001, 'pre_values': 180, 'start_value': 10},
     'Terr':        {'register': 11002, 'pre_values': 2, 'start_value': 1},
     'Tpulse':      {'register': 11003, 'pre_values': 2, 'start_value': 1},
-    'CmdOp':       {'register': 11800, 'pre_values': 0, 'start_value': 3},
-    'Delta':       {'register': 40508, 'pre_values': 1.0, 'start_value': 2.0},
+    'CmdOp':       {'register': 11800, 'pre_values': 0, 'start_value': 5},
+    'Delta':       {'register': 40508, 'pre_values': 1.0, 'start_value': 0.0},
     'SetPos':      {'register': 12800, 'pre_values': 1.0, 'start_value': 0.0},
     'AutSet':      {'register': 40510, 'pre_values': 1.0, 'start_value': 0.0},
     'InPos':       {'register': 40512, 'pre_values': 1.0, 'start_value': 0.0},
@@ -41,9 +41,9 @@ START_VALUE = {
     'Fbking':      {'register': 40151, 'pre_values': True, 'start_value': False},
 }
 
-WORK_MODES = ('Oos', 'Auto', 'Local', 'Man', 'Imt',)
+WORK_MODES = ('Oos', 'Auto', 'Local', 'Man', 'Imt')
 CMDOP_REGISTER = START_VALUE['CmdOp']['register']
-#SWITCH = ('MsgOff', 'WHLimEn', 'AHLimEn')
+SWITCH = ('Pos', 'MsgOff', 'MskPerm', 'MskInter', 'MskProtect')
 P_CLOSE_REGISTER = 40031
 P_OPEN_REGISTER = 40032
 P_STOP_REGISTER = 40033
